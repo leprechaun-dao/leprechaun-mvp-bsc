@@ -1,8 +1,28 @@
+import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "../ui/button";
 
-export const Header = () => {
+const routes = {
+  mint: {
+    href: "/",
+    label: "Mint",
+  },
+  trade: {
+    href: "/trade",
+    label: "Trade",
+  },
+  pool: {
+    href: "/pool",
+    label: "Pool",
+  },
+};
+
+export const Header = ({
+  activeRoute,
+}: {
+  activeRoute?: keyof typeof routes;
+}) => {
   return (
     <header className="p-8 flex items-center">
       <Link href="/" className="flex gap-2">
@@ -17,9 +37,17 @@ export const Header = () => {
         </span>
       </Link>
       <div className="ml-12 max-sm:ml-4 font-semibold flex gap-6 max-sm:gap-3 max-sm:text-sm">
-        <Link href="#">Trade</Link>
-        <Link href="#">Mint</Link>
-        <Link href="#">Pool</Link>
+        {Object.entries(routes).map(([key, route]) => (
+          <Link
+            key={key}
+            href={route.href}
+            className={cn("link", {
+              "text-green": activeRoute === key,
+            })}
+          >
+            {route.label}
+          </Link>
+        ))}
       </div>
 
       <Button size="lg" className="ml-auto max-sm:hidden">
