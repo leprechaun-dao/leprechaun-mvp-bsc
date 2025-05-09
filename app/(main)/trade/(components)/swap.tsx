@@ -12,6 +12,8 @@ const SwapWidget = dynamic(
 export const Swap = () => {
   return (
     <SwapWidget
+      // TODO: Replace with our token list
+      tokenList={"https://ipfs.io/ipns/tokens.uniswap.org"}
       theme={{
         fontFamily: "var(--font-inter)",
       }}
