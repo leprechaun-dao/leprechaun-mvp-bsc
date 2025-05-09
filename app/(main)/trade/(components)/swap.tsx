@@ -3,6 +3,7 @@ import { Web3Provider } from "@ethersproject/providers";
 import { darkTheme } from "@uniswap/widgets";
 import "@uniswap/widgets/fonts.css";
 import dynamic from "next/dynamic";
+import tokenList from "@/utils/web3/tokenList.json"
 import { useMemo } from "react";
 import { useWalletClient } from "wagmi";
 
@@ -26,8 +27,7 @@ export const Swap = () => {
       hideConnectionUI={true}
       provider={provider}
       className="Uniswap"
-      // TODO: Replace with our token list
-      tokenList={"https://ipfs.io/ipns/tokens.uniswap.org"}
+      tokenList={tokenList.tokens}
       theme={{
         ...darkTheme,
         container: "#0E0E12",
