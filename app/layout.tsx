@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -19,7 +20,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} antialiased`}>{children}</body>
+      <body
+        className={cn(
+          `${inter.variable} antialiased`,
+          // For now this will always dark, for simplicity, we may change this later
+          "dark",
+        )}
+      >
+        {children}
+      </body>
     </html>
   );
 }

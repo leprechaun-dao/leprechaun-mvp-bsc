@@ -43,6 +43,17 @@
 }
 
 :root {
+    --color-gold-50: 60 9% 95%;
+    --color-gold-100: 60 28% 86%;
+    --color-gold-200: 43 41% 80%;
+    --color-gold-300: 43 50% 73%;
+    --color-gold-400: 43 68% 62%;
+    --color-gold-500: 43 68% 62%;
+    --color-gold-600: 43 74% 55%;
+    --color-gold-700: 43 90% 39%;
+    --color-gold-800: 43 100% 31%;
+    --color-gold-900: 41 100% 27%;
+
     --radius: 0.625rem;
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
@@ -119,3 +130,20 @@
         @apply bg-background text-foreground;
     }
 }
+
+@layer utilities {
+    .gold-gradient {
+        background-image: linear-gradient(
+            90.78deg,
+            #ffffb7 0%,
+            #ffe297 3.29%,
+            #f8d57b 20.39%,
+            #ffeeb4 37.13%,
+            #f0c34e 85.19%,
+            #feeab7 100%,
+            #fefff1 100%
+        );
+    }
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
