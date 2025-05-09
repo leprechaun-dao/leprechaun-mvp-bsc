@@ -23,8 +23,11 @@ export const Swap = () => {
         outline: "#27272A",
         networkDefaultShadow: "#B4871233",
 
-        accent: "#27272A",
-        interactive: "#27272A",
+        onAccent: "#27272A",
+        accent: "#FFFFB7",
+        interactive: "#136b3b",
+        onInteractive: "white",
+        accentSoft: "#136b3b",
 
         secondary: "#989898",
         primary: "#EEEEEE",
