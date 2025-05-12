@@ -14,7 +14,7 @@ const SwapWidget = dynamic(
 export const Swap = () => {
   const dialogRef = useRef<HTMLDivElement>(null);
   return (
-    <div>
+    <>
       <div
         className="absolute inset-0 m-10 pointer-events-none [&>*]:pointer-events-auto"
         ref={dialogRef}
@@ -51,6 +51,6 @@ export const Swap = () => {
           fontFamily: "var(--font-inter)",
         }}
       />
-    </div>
+    </>
   );
 };
