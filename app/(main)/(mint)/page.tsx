@@ -53,10 +53,11 @@ import {
 } from "lucide-react";
 import { useState, useEffect, ReactNode } from "react";
 import { useForm } from "react-hook-form";
-import { useAccount, useReadContract, useReadContracts, useConnect } from "wagmi";
+import { useAccount, useReadContract, useConnect } from "wagmi";
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
+import * as constants from "@/utils/constants";
 
 const TokenSelectorButton = ({
   selectedSymbol,
@@ -84,8 +85,30 @@ const TokenSelectorButton = ({
   );
 };
 
-import * as constants from "@/utils/constants";
-import { useMemo } from "react";
+const collateralAssets: SyntheticAssetInfo[] = [
+  {
+    tokenAddress: constants.mWBTCAddress,
+    name: "Bitcoin",
+    symbol: "cbBTC",
+    isActive: true,
+    icon: <SwissFranc />,
+  },
+  {
+    tokenAddress: constants.mWETHAddress,
+    name: "Wrapped Ether",
+    symbol: "wETH",
+    isActive: true,
+    icon: <SaudiRiyal />,
+  },
+  {
+    tokenAddress: constants.mUSDCAddress,
+    name: "USDC",
+    symbol: "USDC",
+    isActive: true,
+    icon: <RussianRuble />,
+  },
+];
+
 
 // const sDOWContract = {
 //   address: constants.sDOWAddress,
@@ -95,9 +118,9 @@ import { useMemo } from "react";
 //   address: constants.PositionManagerAddress,
 //   abi: constants.PositionManagerABI,
 // } as const
-const leprechaunFactoryContract = {
-  address: constants.LeprechaunFactoryAddress,
-  abi: constants.LeprechaunFactoryABI,
+const lensContract = {
+  address: constants.LENSAddress,
+  abi: constants.LeprechaunLensABI,
 } as const
 
 export default function Home() {
@@ -105,79 +128,36 @@ export default function Home() {
   const { connect, connectors } = useConnect();
   const account = useAccount();
 
-  const { data: assetCount } = useReadContract({
-    ...leprechaunFactoryContract,
-    functionName: 'getSyntheticAssetCount',
+  const { data: syntheticAssets } = useReadContract({
+    ...lensContract,
+    functionName: 'getAllSyntheticAssets',
   })
-
-  const calls = useMemo(() => {
-    const _count = Number(assetCount)
-    if (!_count) return []
-
-    return Array.from({ length: _count }, (_, i) => ({
-      ...leprechaunFactoryContract,
-      functionName: 'allSyntheticAssets',
-      args: [i],
-    }))
-  }, [assetCount])
-
-  const { data: assetAddressList } = useReadContracts({
-    // @ts-expect-error we know this calls work
-    contracts: calls,
-    query: {
-      enabled: calls.length > 0,
-    },
-  })
-
-  const addressesCalls = useMemo(() => {
-    if (!assetAddressList) return [];
-
-    return assetAddressList.map((res) => {
-      return {
-        ...leprechaunFactoryContract,
-        functionName: 'syntheticAssets',
-        args: [res.result]
-      };
-    });
-  }, [assetAddressList]);
-
-  const { data: assetDataList } = useReadContracts({
-    // @ts-expect-error we know this calls work
-    contracts: addressesCalls,
-    query: {
-      enabled: addressesCalls.length > 0,
-    },
-  });
 
   const [formattedAssets, setFormattedAssets] = useState<SyntheticAssetInfo[]>([]);
   useEffect(() => {
-    if (!assetDataList || assetDataList.length === 0) return;
-
+    if (!syntheticAssets || (syntheticAssets as SyntheticAssetInfo[]).length === 0) return;
     const iconMap: Record<string, ReactNode> = {
       "CHF": <SwissFranc />,
       "sDOW": <RussianRuble />,
       "SRL": <SaudiRiyal />
     };
 
-    const transformed = assetDataList
-      .filter((item) => item.status === "success" && item.result)
-      .map((item) => {
-        // eslint-ignore-next-line
-        const asset = item.result as any[];
-        console.log(asset)
+    const transformed = (syntheticAssets as SyntheticAssetInfo[])
+      .map((item: SyntheticAssetInfo) => {
+
         return {
-          address: asset[0] as string,
-          name: asset[1] as string,
-          symbol: asset[2] as string,
-          minCollateralRatio: asset[3] as bigint,
-          auctionDiscount: asset[4] as bigint,
-          isActive: asset[5] as boolean,
-          icon: iconMap[asset[2]] || <VaultIcon />,
+          tokenAddress: item.tokenAddress,
+          name: item.name,
+          symbol: item.symbol,
+          minCollateralRatio: item.minCollateralRatio,
+          auctionDiscount: item.auctionDiscount,
+          isActive: item.isActive,
+          icon: iconMap[item.name] || <VaultIcon />,
         };
       });
 
     setFormattedAssets(transformed);
-  }, [assetDataList]);
+  }, [syntheticAssets]);
 
   // TODO: We need to get the token object in here
   const [mint, setMintToken] = useState<{ symbol: string }>();
@@ -248,7 +228,7 @@ export default function Home() {
                                 Select the token you want to use as collateral.
                               </DialogDescription>
                               <TokenSelector
-                                tokens={formattedAssets}
+                                tokens={collateralAssets}
                                 onSelect={(token) => {
                                   setCollateral(token);
                                   setCollateralTokenSelectorOpen(false);

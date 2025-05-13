@@ -1,4 +1,3 @@
-import { RussianRuble, SaudiRiyal, SwissFranc } from "lucide-react";
 import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import {
   Command,
@@ -7,37 +6,6 @@ import {
   CommandItem,
   CommandList,
 } from "./ui/command";
-
-// TODO: Delete this when the data fetching is implemented
-export const tokensMock: SyntheticAssetInfo[] = [
-  {
-    address: "0x1234567890abcdef",
-    name: "Token A",
-    symbol: "Symbol A",
-    minCollateralRatio: BigInt(15000),
-    auctionDiscount: BigInt(1000),
-    isActive: true,
-    icon: <SwissFranc />,
-  },
-  {
-    address: "0xabcdef1234567890",
-    name: "Token B",
-    symbol: "Symbol B",
-    minCollateralRatio: BigInt(15000),
-    auctionDiscount: BigInt(1000),
-    isActive: true,
-    icon: <SaudiRiyal />,
-  },
-  {
-    address: "0x7890abcdef123456",
-    name: "Token C",
-    symbol: "Symbol C",
-    minCollateralRatio: BigInt(15000),
-    auctionDiscount: BigInt(1000),
-    isActive: true,
-    icon: <RussianRuble />,
-  },
-];
 
 export const TokenSelector = ({
   tokens,
@@ -53,10 +21,10 @@ export const TokenSelector = ({
       <CommandList>
         {tokens.map((token) => (
           <CommandItem
-            keywords={[token.name, token.address]}
+            keywords={[token.name, token.tokenAddress]}
             className="h-15 rounded-none"
-            key={token.address}
-            value={token.address}
+            key={token.tokenAddress}
+            value={token.tokenAddress}
             onSelect={() => {
               onSelect?.(token);
             }}
