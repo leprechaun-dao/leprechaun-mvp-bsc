@@ -1,4 +1,4 @@
-import erc20 from "@/utils/abis/ERC20.json";
+import erc20 from "@/utils/abis/ERC20";
 import ico from "@/utils/abis/ICO.json";
 import { icoContract, lprContract, usdcContract } from "@/utils/constants";
 import { ethers, type providers } from "ethers";

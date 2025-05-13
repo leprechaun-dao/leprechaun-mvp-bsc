@@ -1,10 +1,11 @@
 import { http, createConfig } from 'wagmi'
-import { base } from 'wagmi/chains'
+import { arbitrum } from 'wagmi/chains'
 
 export const config = createConfig({
-  chains: [base],
+  // TODO change this to base once the new deployments are up
+  chains: [arbitrum],
   ssr: true,
   transports: {
-    [base.id]: http(),
+    [arbitrum.id]: http(),
   },
 })

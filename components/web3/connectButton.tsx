@@ -1,7 +1,7 @@
 "use client"
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { metaMask } from "wagmi/connectors";
-import { Button } from "../ui/button";
+import { Button } from "@/components/ui/button";
 
 export const ConnectButton = () => {
   const { connect } = useConnect()
@@ -15,6 +15,7 @@ export const ConnectButton = () => {
       connect({ connector: metaMask() });
     }
   };
+
   return (
     <>
       {

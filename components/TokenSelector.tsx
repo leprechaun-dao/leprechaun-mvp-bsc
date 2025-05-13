@@ -8,32 +8,47 @@ import {
   CommandList,
 } from "./ui/command";
 
-interface Token {
-  id: string;
-  value: string;
-  label: string;
-  symbol: ReactNode;
+export interface Token {
+  address : string;
+  name: string;
+  symbol: string;
+  minCollateralRatio: BigInt;
+  auctionDiscount: BigInt;
+  isActive: boolean;
+  value?: BigInt;
+  label?: string;
+  icon?: ReactNode;
 }
+
 
 // TODO: Delete this when the data fetching is implemented
 export const tokensMock: Token[] = [
   {
-    id: "1",
-    value: "0x1234567890abcdef",
-    label: "Token A",
-    symbol: <SwissFranc />,
+    address: "0x1234567890abcdef",
+    name: "Token A",
+    symbol: "Symbol A",
+    minCollateralRatio: BigInt(15000),
+    auctionDiscount: BigInt(1000),
+    isActive: true,
+    icon: <SwissFranc />,
   },
   {
-    id: "2",
-    value: "0xabcdef1234567890",
-    label: "Token B",
-    symbol: <SaudiRiyal />,
+    address: "0xabcdef1234567890",
+    name: "Token B",
+    symbol: "Symbol B",
+    minCollateralRatio: BigInt(15000),
+    auctionDiscount: BigInt(1000),
+    isActive: true,
+    icon: <SaudiRiyal />,
   },
   {
-    id: "3",
-    value: "0x7890abcdef123456",
-    label: "Token C",
-    symbol: <RussianRuble />,
+    address: "0x7890abcdef123456",
+    name: "Token C",
+    symbol: "Symbol C",
+    minCollateralRatio: BigInt(15000),
+    auctionDiscount: BigInt(1000),
+    isActive: true,
+    icon: <RussianRuble />,
   },
 ];
 
@@ -45,13 +60,13 @@ export const TokenSelector = ({ tokens }: { tokens: Token[] }) => {
       <CommandList>
         {tokens.map((token) => (
           <CommandItem
-            keywords={[token.value, token.label]}
+            keywords={[token.name, token.address]}
             className="h-15 rounded-none"
-            key={token.value}
-            value={token.value}
+            key={token.address}
+            value={token.address}
           >
-            <span>{token.symbol}</span>
-            <span>{token.label}</span>
+            <span>{token.icon}</span>
+            <span>{token.name}</span>
           </CommandItem>
         ))}
       </CommandList>
