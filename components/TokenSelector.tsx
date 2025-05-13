@@ -1,5 +1,5 @@
 import { RussianRuble, SaudiRiyal, SwissFranc } from "lucide-react";
-import { ReactNode } from "react";
+import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import {
   Command,
   CommandEmpty,
@@ -8,31 +8,33 @@ import {
   CommandList,
 } from "./ui/command";
 
-interface Token {
-  id: string;
-  value: string;
-  symbol: string;
-  icon: ReactNode;
-}
-
 // TODO: Delete this when the data fetching is implemented
-export const tokensMock: Token[] = [
+export const tokensMock: SyntheticAssetInfo[] = [
   {
-    id: "1",
-    value: "0x1234567890abcdef",
-    symbol: "ETH",
+    address: "0x1234567890abcdef",
+    name: "Token A",
+    symbol: "Symbol A",
+    minCollateralRatio: BigInt(15000),
+    auctionDiscount: BigInt(1000),
+    isActive: true,
     icon: <SwissFranc />,
   },
   {
-    id: "2",
-    value: "0xabcdef1234567890",
-    symbol: "DOGE",
+    address: "0xabcdef1234567890",
+    name: "Token B",
+    symbol: "Symbol B",
+    minCollateralRatio: BigInt(15000),
+    auctionDiscount: BigInt(1000),
+    isActive: true,
     icon: <SaudiRiyal />,
   },
   {
-    id: "3",
-    value: "0x7890abcdef123456",
-    symbol: "BTC",
+    address: "0x7890abcdef123456",
+    name: "Token C",
+    symbol: "Symbol C",
+    minCollateralRatio: BigInt(15000),
+    auctionDiscount: BigInt(1000),
+    isActive: true,
     icon: <RussianRuble />,
   },
 ];
@@ -41,8 +43,8 @@ export const TokenSelector = ({
   tokens,
   onSelect,
 }: {
-  tokens: Token[];
-  onSelect?: (token: Token) => unknown;
+  tokens: SyntheticAssetInfo[];
+  onSelect?: (token: SyntheticAssetInfo) => unknown;
 }) => {
   return (
     <Command className="**:data-[slot=command-input-wrapper]:h-15">
@@ -51,16 +53,17 @@ export const TokenSelector = ({
       <CommandList>
         {tokens.map((token) => (
           <CommandItem
-            keywords={[token.value, token.symbol]}
+            keywords={[token.name, token.address]}
             className="h-15 rounded-none"
-            key={token.value}
-            value={token.value}
+            key={token.address}
+            value={token.address}
             onSelect={() => {
               onSelect?.(token);
             }}
           >
             <span>{token.icon}</span>
-            <span>{token.symbol}</span>
+            <span>{token.name}</span>
+
           </CommandItem>
         ))}
       </CommandList>

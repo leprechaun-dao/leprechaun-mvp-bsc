@@ -2,6 +2,7 @@
 import { DecimalInput } from "@/components/DecimalInput";
 import { Header } from "@/components/layout/header";
 import { TokenSelector, tokensMock } from "@/components/TokenSelector";
+import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { Button, ButtonProps } from "@/components/ui/button";
 import {
   Card,
@@ -51,7 +52,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useAccount, useConnect } from "wagmi";
+import { useAccount, useReadContract, useReadContracts, useConnect } from "wagmi";
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
@@ -82,10 +83,74 @@ const TokenSelectorButton = ({
   );
 };
 
+import * as constants from "@/utils/constants";
+import { useMemo } from "react";
+
+// const sDOWContract = {
+//   address: constants.sDOWAddress,
+//   abi: constants.SyntheticAssetABI,
+// } as const
+// const positionManagerContract = {
+//   address: constants.PositionManagerAddress,
+//   abi: constants.PositionManagerABI,
+// } as const
+const leprechaunFactoryContract = {
+  address: constants.LeprechaunFactoryAddress,
+  abi: constants.LeprechaunFactoryABI,
+} as const
+
 export default function Home() {
   const form = useForm();
   const { connect, connectors } = useConnect();
   const account = useAccount();
+
+  const { data: assetCount } = useReadContract({
+    ...leprechaunFactoryContract,
+    functionName: 'getSyntheticAssetCount',
+  })
+
+  const calls = useMemo(() => {
+    const _count = Number(assetCount)
+    if (!_count) return []
+
+    return Array.from({ length: _count }, (_, i) => ({
+      ...leprechaunFactoryContract,
+      functionName: 'allSyntheticAssets',
+      args: [i],
+    }))
+  }, [assetCount])
+
+  const { data: assetAddressList } = useReadContracts({
+    // @ts-expect-error we know this calls work
+    contracts: calls,
+    query: {
+      enabled: calls.length > 0,
+    },
+  })
+
+  const addressesCalls = useMemo(() => {
+    if (!assetAddressList) return [];
+
+    return assetAddressList.map((res) => {
+      return {
+        ...leprechaunFactoryContract,
+        functionName: 'syntheticAssets',
+        args: [res.result]
+      };
+    });
+  }, [assetAddressList]);
+
+  // @ts-expect-error we know this calls work
+  const { data: assetDataList } = useReadContracts({
+    // @ts-expect-error we know this calls work
+    contracts: addressesCalls,
+    query: {
+      enabled: addressesCalls.length > 0,
+    },
+  }) as unknown as { result: SyntheticAssetInfo }[];
+
+  // TODO add icons and reactivity to the TokenSelector
+  console.log(assetDataList)
 
   // TODO: We need to get the token object in here
   const [mint, setMintToken] = useState<{ symbol: string }>();
@@ -309,23 +374,23 @@ export default function Home() {
             )}
             {(account.status === "disconnected" ||
               account.status === "connecting") && (
-              <p>
-                Connect your wallet to see your positions. If you don&apos;t
-                have a wallet, you can create one using MetaMask.
-              </p>
-            )}
+                <p>
+                  Connect your wallet to see your positions. If you don&apos;t
+                  have a wallet, you can create one using MetaMask.
+                </p>
+              )}
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-            <CardFooter>
-              <Button
-                className="w-full"
-                onClick={() => connect({ connector: connectors[0] })}
-              >
-                Connect
-              </Button>
-            </CardFooter>
-          )}
+              <CardFooter>
+                <Button
+                  className="w-full"
+                  onClick={() => connect({ connector: connectors[0] })}
+                >
+                  Connect
+                </Button>
+              </CardFooter>
+            )}
         </Card>
       </main>
     </div>

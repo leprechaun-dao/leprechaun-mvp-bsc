@@ -1,12 +1,13 @@
 import { createConfig, http } from "wagmi";
-import { base } from "wagmi/chains";
+import { arbitrum } from "wagmi/chains";
 import { metaMask } from "wagmi/connectors";
 
 export const wagmiConfig = createConfig({
-  chains: [base],
+  // TODO change this to base once the new deployments are up
+  chains: [arbitrum],
   connectors: [metaMask()],
   ssr: true,
   transports: {
-    [base.id]: http(),
+    [arbitrum.id]: http(),
   },
 });
