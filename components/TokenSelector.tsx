@@ -51,7 +51,13 @@ export const tokensMock: Token[] = [
   },
 ];
 
-export const TokenSelector = ({ tokens }: { tokens: Token[] }) => {
+export const TokenSelector = ({
+  tokens,
+  onSelect,
+}: {
+  tokens: Token[];
+  onSelect?: (token: Token) => unknown;
+}) => {
   return (
     <Command className="**:data-[slot=command-input-wrapper]:h-15">
       <CommandInput />
@@ -63,9 +69,13 @@ export const TokenSelector = ({ tokens }: { tokens: Token[] }) => {
             className="h-15 rounded-none"
             key={token.address}
             value={token.address}
+            onSelect={() => {
+              onSelect?.(token);
+            }}
           >
             <span>{token.icon}</span>
             <span>{token.name}</span>
+
           </CommandItem>
         ))}
       </CommandList>

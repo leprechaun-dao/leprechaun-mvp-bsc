@@ -1,15 +1,14 @@
 import { Input } from "@/components/ui/input";
 
 const defaultFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
+  style: "decimal",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
-export const CurrencyInput = ({
+export const DecimalInput = ({
   formatter = defaultFormatter,
-  placeholder = "$0.00",
+  placeholder = "0.00",
   onChange,
   ...props
 }: {
