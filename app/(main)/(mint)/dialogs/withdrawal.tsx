@@ -18,16 +18,16 @@ import {
 import { DialogProps } from "@radix-ui/react-dialog";
 import { useForm } from "react-hook-form";
 
-export const DepositDialog = ({ ...props }: DialogProps) => {
+export const WithdrawalDialog = (props: DialogProps) => {
   const form = useForm();
 
   return (
     <Form {...form}>
       <Dialog {...props}>
         <DialogContent>
-          <DialogTitle>Deposit</DialogTitle>
+          <DialogTitle>Withdrawal</DialogTitle>
           <DialogDescription>
-            Enter the amount of tokens you want to deposit.
+            Enter the amount of minted tokens that you want to withdrawal.
           </DialogDescription>
           <div className="text-sm">
             <span className="font-medium">Collateral:</span> ETH
@@ -51,7 +51,7 @@ export const DepositDialog = ({ ...props }: DialogProps) => {
             <DialogClose asChild>
               <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button type="submit">Deposit</Button>
+            <Button type="submit">Withdrawal</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -40,23 +40,49 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronDown, EllipsisVertical, RussianRuble } from "lucide-react";
+import {
+  BanknoteArrowDown,
+  BanknoteArrowUp,
+  BanknoteX,
+  ChevronDown,
+  EllipsisVertical,
+  RussianRuble,
+} from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useAccount, useConnect } from "wagmi";
+import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog } from "./dialogs/deposit";
+import { WithdrawalDialog } from "./dialogs/withdrawal";
 
 export default function Home() {
   const form = useForm();
   const { connect, connectors } = useConnect();
   const account = useAccount();
 
-  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [openDialog, setOpenDialog] = useState<
+    "deposit" | "withdrawal" | "close-position" | null
+  >(null);
+
   return (
     <div className="flex flex-col min-h-screen w-full">
       <DepositDialog
-        open={depositDialogOpen}
-        onOpenChange={setDepositDialogOpen}
+        open={openDialog === "deposit"}
+        onOpenChange={(v) =>
+          v ? setOpenDialog("deposit") : setOpenDialog(null)
+        }
+      />
+      <WithdrawalDialog
+        open={openDialog === "withdrawal"}
+        onOpenChange={(v) =>
+          v ? setOpenDialog("withdrawal") : setOpenDialog(null)
+        }
+      />
+      <ClosePositionDialog
+        open={openDialog === "close-position"}
+        onOpenChange={(v) =>
+          v ? setOpenDialog("close-position") : setOpenDialog(null)
+        }
       />
 
       <Header activeRoute="mint" />
@@ -193,8 +219,8 @@ export default function Home() {
                 </TableHeader>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="flex h-full gap-1 items-center *:[svg]:size-4">
-                      <RussianRuble /> RUB
+                    <TableCell>
+                      <RussianRuble className="inline-block size-4" /> RUB
                     </TableCell>
                     <TableCell>1.04 BTC</TableCell>
                     <TableCell>5</TableCell>
@@ -203,15 +229,29 @@ export default function Home() {
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger>
-                          <EllipsisVertical className="size-3" />
+                          <Button variant="ghost" className="px-1">
+                            <EllipsisVertical className="size-3" />
+                          </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
                           <DropdownMenuItem
-                            onClick={() => setDepositDialogOpen(true)}
+                            onClick={() => setOpenDialog("deposit")}
                           >
+                            <BanknoteArrowUp />
                             Deposit
                           </DropdownMenuItem>
-                          <DropdownMenuItem>Withdrawal</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setOpenDialog("withdrawal")}
+                          >
+                            <BanknoteArrowDown />
+                            Withdrawal
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setOpenDialog("close-position")}
+                          >
+                            <BanknoteX />
+                            Close Position
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
