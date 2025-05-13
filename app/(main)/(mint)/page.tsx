@@ -157,7 +157,6 @@ export default function Home() {
             <CardFooter>
               <Button
                 className="w-full"
-                // TODO: Should we add more connectors?
                 onClick={() => connect({ connector: metaMask() })}
               >
                 Connect
