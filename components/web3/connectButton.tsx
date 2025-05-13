@@ -1,31 +1,44 @@
-"use client"
+"use client";
+import { cn } from "@/utils/css";
+import { useCallback, useMemo } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { metaMask } from "wagmi/connectors";
-import { Button } from "../ui/button";
+import { Button, ButtonProps } from "../ui/button";
 
 export const ConnectButton = () => {
-  const { connect } = useConnect()
+  const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const account = useAccount();
 
-  const handleClick = () => {
+  const handleClick = useCallback(() => {
     if (account.status === "connected") {
       disconnect();
     } else {
       connect({ connector: metaMask() });
     }
-  };
+  }, [account.status, connect, disconnect]);
+
+  const commonProps = useMemo(
+    (): ButtonProps => ({
+      className: "ml-auto",
+      onClick: () => handleClick(),
+      children: account.status === "connected" ? "Disconnect" : "Connect",
+    }),
+    [account.status, handleClick],
+  );
+
   return (
     <>
-      {
-        [0, 1].map((val) => {
-          return (
-            <Button size="lg" key={`connect-button-${val}`} className={`${val === 0 ? "ml-auto max-sm:hidden" : "ml-auto sm:hidden"}`} onClick={() => handleClick()}>
-              {account.status === "connected" ? "Disconnect" : "Connect"}
-            </Button>
-          )
-        })
-      }
+      <Button
+        size="lg"
+        {...commonProps}
+        className={cn("max-sm:hidden", commonProps.className)}
+      />
+      <Button
+        size="sm"
+        {...commonProps}
+        className={cn("sm:hidden", commonProps.className)}
+      />
     </>
-  )
-}
+  );
+};
