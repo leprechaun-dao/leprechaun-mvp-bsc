@@ -14,10 +14,6 @@ import { useForm } from "react-hook-form";
 export default function Home() {
   const form = useForm();
 
-  const minted = form.watch("minted");
-
-  console.log("minted", minted);
-
   return (
     <div className="flex flex-col min-h-screen w-full">
       <Header activeRoute="mint" />
