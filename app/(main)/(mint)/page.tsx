@@ -24,6 +24,15 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { RussianRuble } from "lucide-react";
 import { useForm } from "react-hook-form";
 
 export default function Home() {
@@ -32,7 +41,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen w-full">
       <Header activeRoute="mint" />
-      <main className="flex flex-1 items-center justify-center mb-[20vh] px-6">
+      <main className="flex flex-col gap-5 flex-1 items-center justify-center mb-[20vh] px-6">
         <Card className="w-lg">
           <CardHeader>
             <CardTitle>Mint</CardTitle>
@@ -98,6 +107,38 @@ export default function Home() {
               </Form>
             </div>
           </CardContent>
+        </Card>
+
+        <Card className="w-lg">
+          <CardHeader>
+            <CardTitle>Your Positions</CardTitle>
+            <CardDescription>
+              These are the positions you currently have for the connected
+              wallet.
+            </CardDescription>
+            {/* TODO: Add button for wallet connection */}
+
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Symbol</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Price</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell className="flex gap-1 items-center *:[svg]:size-4">
+                      <RussianRuble /> RUB
+                    </TableCell>
+                    <TableCell>5</TableCell>
+                    <TableCell>$11.00 USD</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </CardHeader>
         </Card>
       </main>
     </div>
