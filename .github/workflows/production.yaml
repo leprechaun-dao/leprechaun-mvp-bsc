@@ -10,8 +10,10 @@ jobs:
   Deploy-Production:
     runs-on: ubuntu-latest
     steps:
-      - name: Enable Corepack
-        run: corepack enable
+      - name: Install
+        run: |
+          yarn policies set-version
+          yarn install --fronze-lockfile
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
