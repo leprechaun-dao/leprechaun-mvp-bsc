@@ -4,7 +4,7 @@ import { darkTheme } from "@uniswap/widgets";
 import "@uniswap/widgets/fonts.css";
 import dynamic from "next/dynamic";
 import tokenList from "@/utils/web3/tokenList.json"
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { useWalletClient } from "wagmi";
 
 const SwapWidget = dynamic(
@@ -22,29 +22,46 @@ export const Swap = () => {
     return new Web3Provider(walletClient.transport, walletClient.chain.id);
   }, [walletClient]);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
   return (
-    <SwapWidget
-      hideConnectionUI={true}
-      provider={provider}
-      className="Uniswap"
-      tokenList={tokenList.tokens}
-      theme={{
-        ...darkTheme,
-        container: "#0E0E12",
-        module: "#18181B",
-        outline: "#27272A",
-        networkDefaultShadow: "#B4871233",
+    <>
+      <div
+        className="absolute inset-0 m-10 pointer-events-none [&>*]:pointer-events-auto"
+        ref={dialogRef}
+      ></div>
+      <style>
+        {`
+          // This is hack to fix a weird issue with the Uniswap widget
+          .TokenOptions__OnHover-sc-xx1k3q-2 {
+            display: none;
+          }
+        `}
+      </style>
+      <SwapWidget
+        hideConnectionUI={true}
+        provider={provider}
+        className="Uniswap"
+        tokenList={tokenList.tokens}
+        brandedFooter={false}
+        dialog={dialogRef.current}
+        theme={{
+          ...darkTheme,
+          container: "#0E0E12",
+          module: "#18181B",
+          outline: "#27272A",
+          networkDefaultShadow: "#B4871233",
 
-        onAccent: "#27272A",
-        accent: "#FFFFB7",
-        interactive: "#136b3b",
-        onInteractive: "#FFFFFF",
-        accentSoft: "#136b3b",
+          onAccent: "#27272A",
+          accent: "#FFFFB7",
+          interactive: "#136b3b",
+          onInteractive: "white",
+          accentSoft: "#136b3b",
 
-        secondary: "#989898",
-        primary: "#EEEEEE",
-        fontFamily: "var(--font-inter)",
-      }}
-    />
+          secondary: "#989898",
+          primary: "#EEEEEE",
+          fontFamily: "var(--font-inter)",
+        }}
+      />
+    </>
   );
 };
