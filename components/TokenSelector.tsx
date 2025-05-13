@@ -9,17 +9,16 @@ import {
 } from "./ui/command";
 
 export interface Token {
-  address : string;
+  address: string;
   name: string;
   symbol: string;
-  minCollateralRatio: BigInt;
-  auctionDiscount: BigInt;
+  minCollateralRatio: bigint;
+  auctionDiscount: bigint;
   isActive: boolean;
-  value?: BigInt;
+  value?: bigint;
   label?: string;
   icon?: ReactNode;
 }
-
 
 // TODO: Delete this when the data fetching is implemented
 export const tokensMock: Token[] = [
