@@ -2,7 +2,7 @@
 import { DecimalInput } from "@/components/DecimalInput";
 import { Header } from "@/components/layout/header";
 import { TokenSelector, tokensMock } from "@/components/TokenSelector";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonProps } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -40,6 +40,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/utils/css";
 import {
   BanknoteArrowDown,
   BanknoteArrowUp,
@@ -55,10 +56,44 @@ import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
 
+const TokenSelectorButton = ({
+  selectedSymbol,
+  className,
+  ...props
+}: {
+  selectedSymbol?: string;
+} & ButtonProps) => {
+  return (
+    <Button {...props} className={cn("h-full group w-32 relative", className)}>
+      {!!selectedSymbol ? (
+        <>
+          <span className="group-hover:block group-focus-visible:block hidden">
+            Change Token
+          </span>
+          <span className="group-hover:hidden group-focus-visible:hidden flex items-center gap-1">
+            {selectedSymbol}
+            <ChevronDown className="size-3" />
+          </span>
+        </>
+      ) : (
+        <span>Select Token</span>
+      )}
+    </Button>
+  );
+};
+
 export default function Home() {
   const form = useForm();
   const { connect, connectors } = useConnect();
   const account = useAccount();
+
+  // TODO: We need to get the token object in here
+  const [mint, setMintToken] = useState<{ symbol: string }>();
+  const [collateral, setCollateral] = useState<{ symbol: string }>();
+
+  const [mintTokenSelectorOpen, setMintTokenSelectorOpen] = useState(false);
+  const [collateralTokenSelectorOpen, setCollateralTokenSelectorOpen] =
+    useState(false);
 
   const [openDialog, setOpenDialog] = useState<
     "deposit" | "withdrawal" | "close-position" | null
@@ -99,32 +134,34 @@ export default function Home() {
               <div className="flex flex-col gap-4 **:data-[slot=input]:h-14 **:data-[slot=input]:text-right **:data-[slot=input]:text-lg">
                 <FormField
                   control={form.control}
-                  name="colateral"
+                  name="collateral-amount"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Collateral</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-2">
                           <DecimalInput {...field} />
-                          <Dialog>
+                          <Dialog
+                            open={collateralTokenSelectorOpen}
+                            onOpenChange={setCollateralTokenSelectorOpen}
+                          >
                             <DialogTrigger asChild>
-                              <Button className="h-full group w-32 relative">
-                                <span className="hidden">Select Token</span>
-                                <span className="group-hover:block hidden">
-                                  Change Token
-                                </span>
-                                <span className="group-hover:hidden flex items-center gap-1">
-                                  ETH
-                                  <ChevronDown className="size-3" />
-                                </span>
-                              </Button>
+                              <TokenSelectorButton
+                                selectedSymbol={collateral?.symbol}
+                              />
                             </DialogTrigger>
                             <DialogContent>
                               <DialogTitle>Token Selector</DialogTitle>
                               <DialogDescription>
                                 Select the token you want to use as collateral.
                               </DialogDescription>
-                              <TokenSelector tokens={tokensMock} />
+                              <TokenSelector
+                                tokens={tokensMock}
+                                onSelect={(token) => {
+                                  setCollateral(token);
+                                  setCollateralTokenSelectorOpen(false);
+                                }}
+                              />
                             </DialogContent>
                           </Dialog>
                         </div>
@@ -134,23 +171,34 @@ export default function Home() {
                 />
                 <FormField
                   control={form.control}
-                  name="minted"
+                  name="mint-amount"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Minted</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-2">
                           <DecimalInput {...field} />
-                          <Dialog>
+                          <Dialog
+                            open={mintTokenSelectorOpen}
+                            onOpenChange={setMintTokenSelectorOpen}
+                          >
                             <DialogTrigger asChild>
-                              <Button className="h-full">Select Token</Button>
+                              <TokenSelectorButton
+                                selectedSymbol={mint?.symbol}
+                              />
                             </DialogTrigger>
                             <DialogContent>
                               <DialogTitle>Token Selector</DialogTitle>
                               <DialogDescription>
                                 Select the token you want to mint.
                               </DialogDescription>
-                              <TokenSelector tokens={tokensMock} />
+                              <TokenSelector
+                                tokens={tokensMock}
+                                onSelect={(token) => {
+                                  setMintToken(token);
+                                  setMintTokenSelectorOpen(false);
+                                }}
+                              />
                             </DialogContent>
                           </Dialog>
                         </div>
@@ -211,8 +259,8 @@ export default function Home() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Asset</TableHead>
-                    <TableHead>Collateral</TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead>Collateral</TableHead>
                     <TableHead>Current Price</TableHead>
                     <TableHead>Liq. Price</TableHead>
                   </TableRow>
@@ -222,8 +270,8 @@ export default function Home() {
                     <TableCell>
                       <RussianRuble className="inline-block size-4" /> RUB
                     </TableCell>
-                    <TableCell>1.04 BTC</TableCell>
                     <TableCell>5</TableCell>
+                    <TableCell>1.04 BTC</TableCell>
                     <TableCell>$5.00</TableCell>
                     <TableCell>$11.00</TableCell>
                     <TableCell>

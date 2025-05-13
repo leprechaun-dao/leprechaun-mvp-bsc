@@ -11,8 +11,8 @@ import {
 interface Token {
   id: string;
   value: string;
-  label: string;
-  symbol: ReactNode;
+  symbol: string;
+  icon: ReactNode;
 }
 
 // TODO: Delete this when the data fetching is implemented
@@ -20,20 +20,20 @@ export const tokensMock: Token[] = [
   {
     id: "1",
     value: "0x1234567890abcdef",
-    label: "Token A",
-    symbol: <SwissFranc />,
+    symbol: "ETH",
+    icon: <SwissFranc />,
   },
   {
     id: "2",
     value: "0xabcdef1234567890",
-    label: "Token B",
-    symbol: <SaudiRiyal />,
+    symbol: "DOGE",
+    icon: <SaudiRiyal />,
   },
   {
     id: "3",
     value: "0x7890abcdef123456",
-    label: "Token C",
-    symbol: <RussianRuble />,
+    symbol: "BTC",
+    icon: <RussianRuble />,
   },
 ];
 
@@ -42,7 +42,7 @@ export const TokenSelector = ({
   onSelect,
 }: {
   tokens: Token[];
-  onSelect?: (value: string) => void;
+  onSelect?: (token: Token) => unknown;
 }) => {
   return (
     <Command className="**:data-[slot=command-input-wrapper]:h-15">
@@ -51,14 +51,16 @@ export const TokenSelector = ({
       <CommandList>
         {tokens.map((token) => (
           <CommandItem
-            keywords={[token.value, token.label]}
+            keywords={[token.value, token.symbol]}
             className="h-15 rounded-none"
             key={token.value}
             value={token.value}
-            onSelect={onSelect}
+            onSelect={() => {
+              onSelect?.(token);
+            }}
           >
+            <span>{token.icon}</span>
             <span>{token.symbol}</span>
-            <span>{token.label}</span>
           </CommandItem>
         ))}
       </CommandList>
