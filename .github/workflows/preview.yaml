@@ -13,7 +13,7 @@ jobs:
       - name: Install
         run: |
           yarn policies set-version
-          yarn install --fronze-lockfile
+          yarn install --frozen-lockfile
         with:
           node-version: "20"
           cache: "yarn"
