@@ -32,6 +32,7 @@ export const Swap = () => {
       <style>
         {
           // This is a hack to fix the buggy hover effect on the Uniswap widget
+          // and its positioning/height
           `
           .uniswap-dialog [color='container'] > div > div:nth-child(3) {
             position: relative;
@@ -39,6 +40,15 @@ export const Swap = () => {
 
           .uniswap-dialog [color='container'] {
             height: fit-content;
+          }
+          `
+        }
+
+        {
+          // Update the style for the no tokens available on network message
+          `
+          .uniswap-dialog [color='container'] .NoTokensAvailableOnNetwork__StyledColumn-sc-1xm8b8y-1 > div {
+            padding: 12px 32px 32px 32px;
           }
         `
         }
