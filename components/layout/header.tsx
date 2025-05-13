@@ -1,7 +1,7 @@
 import { cn } from "@/utils/css";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "../ui/button";
+import { ConnectButton } from "../web3/connectButton";
 
 const routes = {
   mint: {
@@ -50,12 +50,8 @@ export const Header = ({
         ))}
       </div>
 
-      <Button size="lg" className="ml-auto max-sm:hidden">
-        Connect
-      </Button>
-      <Button size="sm" className="ml-auto sm:hidden">
-        Connect
-      </Button>
+
+      <ConnectButton />
     </header>
   );
 };

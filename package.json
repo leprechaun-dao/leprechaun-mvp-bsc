@@ -14,6 +14,7 @@
     "@radix-ui/react-label": "^2.1.6",
     "@radix-ui/react-popover": "^1.1.13",
     "@radix-ui/react-slot": "^1.2.2",
+    "@tanstack/react-query": "^5.75.7",
     "@uniswap/widgets": "2.59.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
@@ -26,6 +27,8 @@
     "react-hook-form": "^7.56.3",
     "react-redux": "9.2.0",
     "tailwind-merge": "3.2.0",
+    "viem": "2.x",
+    "wagmi": "^2.15.2",
     "zod": "^3.24.4"
   },
   "devDependencies": {
