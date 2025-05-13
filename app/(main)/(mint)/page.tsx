@@ -230,7 +230,7 @@ export default function Home() {
                       <DropdownMenu>
                         <DropdownMenuTrigger>
                           <Button variant="ghost" className="px-1">
-                            <EllipsisVertical className="size-3" />
+                            <EllipsisVertical className="size-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
