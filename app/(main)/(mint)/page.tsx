@@ -1,7 +1,7 @@
 "use client";
 import { DecimalInput } from "@/components/DecimalInput";
 import { Header } from "@/components/layout/header";
-import { TokenSelector, tokensMock } from "@/components/TokenSelector";
+import { TokenSelector } from "@/components/TokenSelector";
 import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { Button, ButtonProps } from "@/components/ui/button";
 import {
@@ -49,8 +49,9 @@ import {
   ChevronDown,
   EllipsisVertical,
   RussianRuble,
+  SaudiRiyal, SwissFranc, VaultIcon
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { useAccount, useReadContract, useReadContracts, useConnect } from "wagmi";
 import { ClosePositionDialog } from "./dialogs/close-position";
@@ -140,17 +141,43 @@ export default function Home() {
     });
   }, [assetAddressList]);
 
-  // @ts-expect-error we know this calls work
   const { data: assetDataList } = useReadContracts({
     // @ts-expect-error we know this calls work
     contracts: addressesCalls,
     query: {
       enabled: addressesCalls.length > 0,
     },
-  }) as unknown as { result: SyntheticAssetInfo }[];
+  });
 
-  // TODO add icons and reactivity to the TokenSelector
-  console.log(assetDataList)
+  const [formattedAssets, setFormattedAssets] = useState<SyntheticAssetInfo[]>([]);
+  useEffect(() => {
+    if (!assetDataList || assetDataList.length === 0) return;
+
+    const iconMap: Record<string, ReactNode> = {
+      "CHF": <SwissFranc />,
+      "sDOW": <RussianRuble />,
+      "SRL": <SaudiRiyal />
+    };
+
+    const transformed = assetDataList
+      .filter((item) => item.status === "success" && item.result)
+      .map((item) => {
+        // eslint-ignore-next-line
+        const asset = item.result as any[];
+        console.log(asset)
+        return {
+          address: asset[0] as string,
+          name: asset[1] as string,
+          symbol: asset[2] as string,
+          minCollateralRatio: asset[3] as bigint,
+          auctionDiscount: asset[4] as bigint,
+          isActive: asset[5] as boolean,
+          icon: iconMap[asset[2]] || <VaultIcon />,
+        };
+      });
+
+    setFormattedAssets(transformed);
+  }, [assetDataList]);
 
   // TODO: We need to get the token object in here
   const [mint, setMintToken] = useState<{ symbol: string }>();
@@ -221,7 +248,7 @@ export default function Home() {
                                 Select the token you want to use as collateral.
                               </DialogDescription>
                               <TokenSelector
-                                tokens={tokensMock}
+                                tokens={formattedAssets}
                                 onSelect={(token) => {
                                   setCollateral(token);
                                   setCollateralTokenSelectorOpen(false);
@@ -258,7 +285,7 @@ export default function Home() {
                                 Select the token you want to mint.
                               </DialogDescription>
                               <TokenSelector
-                                tokens={tokensMock}
+                                tokens={formattedAssets}
                                 onSelect={(token) => {
                                   setMintToken(token);
                                   setMintTokenSelectorOpen(false);
