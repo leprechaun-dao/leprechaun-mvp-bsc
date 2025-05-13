@@ -1,7 +1,22 @@
 "use client";
 import { CurrencyInput } from "@/components/CurrencyInput";
 import { Header } from "@/components/layout/header";
-import { Card, CardContent } from "@/components/ui/card";
+import { TokenSelector, tokensMock } from "@/components/TokenSelector";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -19,8 +34,14 @@ export default function Home() {
       <Header activeRoute="mint" />
       <main className="flex flex-1 items-center justify-center mb-[20vh] px-6">
         <Card className="w-lg">
+          <CardHeader>
+            <CardTitle>Mint</CardTitle>
+            <CardDescription>
+              Enter the amount of collateral and minted tokens.
+            </CardDescription>
+          </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-2 [&_.input]:h-20 [&_.input]:text-right [&_.input]:text-lg">
+            <div className="flex flex-col gap-4 [&_.input]:h-14 [&_.input]:text-right [&_.input]:text-lg">
               <Form {...form}>
                 <FormField
                   control={form.control}
@@ -29,7 +50,21 @@ export default function Home() {
                     <FormItem>
                       <FormLabel>Collateral</FormLabel>
                       <FormControl>
-                        <CurrencyInput className="input" {...field} />
+                        <div className="flex items-center gap-2">
+                          <CurrencyInput className="input" {...field} />
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button className="h-full">Select Token</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogTitle>Token Selector</DialogTitle>
+                              <DialogDescription>
+                                Select the token you want to use as collateral.
+                              </DialogDescription>
+                              <TokenSelector tokens={tokensMock} />
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                       </FormControl>
                     </FormItem>
                   )}
@@ -41,7 +76,21 @@ export default function Home() {
                     <FormItem>
                       <FormLabel>Minted</FormLabel>
                       <FormControl>
-                        <CurrencyInput className="input" {...field} />
+                        <div className="flex items-center gap-2">
+                          <CurrencyInput className="input" {...field} />
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button className="h-full">Select Token</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogTitle>Token Selector</DialogTitle>
+                              <DialogDescription>
+                                Select the token you want to mint.
+                              </DialogDescription>
+                              <TokenSelector tokens={tokensMock} />
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                       </FormControl>
                     </FormItem>
                   )}
