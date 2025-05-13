@@ -1,5 +1,5 @@
 import { RussianRuble, SaudiRiyal, SwissFranc } from "lucide-react";
-import { ReactNode } from "react";
+import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import {
   Command,
   CommandEmpty,
@@ -8,20 +8,8 @@ import {
   CommandList,
 } from "./ui/command";
 
-export interface Token {
-  address: string;
-  name: string;
-  symbol: string;
-  minCollateralRatio: bigint;
-  auctionDiscount: bigint;
-  isActive: boolean;
-  value?: bigint;
-  label?: string;
-  icon?: ReactNode;
-}
-
 // TODO: Delete this when the data fetching is implemented
-export const tokensMock: Token[] = [
+export const tokensMock: SyntheticAssetInfo[] = [
   {
     address: "0x1234567890abcdef",
     name: "Token A",
@@ -55,8 +43,8 @@ export const TokenSelector = ({
   tokens,
   onSelect,
 }: {
-  tokens: Token[];
-  onSelect?: (token: Token) => unknown;
+  tokens: SyntheticAssetInfo[];
+  onSelect?: (token: SyntheticAssetInfo) => unknown;
 }) => {
   return (
     <Command className="**:data-[slot=command-input-wrapper]:h-15">

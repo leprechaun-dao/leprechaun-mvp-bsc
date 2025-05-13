@@ -1,7 +1,8 @@
 "use client";
 import { DecimalInput } from "@/components/DecimalInput";
 import { Header } from "@/components/layout/header";
-import { Token, TokenSelector, tokensMock } from "@/components/TokenSelector";
+import { TokenSelector, tokensMock } from "@/components/TokenSelector";
+import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { Button, ButtonProps } from "@/components/ui/button";
 import {
   Card,
@@ -146,7 +147,7 @@ export default function Home() {
     query: {
       enabled: addressesCalls.length > 0,
     },
-  }) as unknown as { result: Token }[];
+  }) as unknown as { result: SyntheticAssetInfo }[];
 
   // TODO add icons and reactivity to the TokenSelector
   console.log(assetDataList)
@@ -381,15 +382,15 @@ export default function Home() {
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-            <CardFooter>
-              <Button
-                className="w-full"
-                onClick={() => connect({ connector: connectors[0] })}
-              >
-                Connect
-              </Button>
-            </CardFooter>
-          )}
+              <CardFooter>
+                <Button
+                  className="w-full"
+                  onClick={() => connect({ connector: connectors[0] })}
+                >
+                  Connect
+                </Button>
+              </CardFooter>
+            )}
         </Card>
       </main>
     </div>
