@@ -40,7 +40,6 @@ export const Swap = () => {
           .uniswap-dialog [color='container'] {
             height: fit-content;
           }
-
         `
         }
       </style>
@@ -49,7 +48,6 @@ export const Swap = () => {
           hideConnectionUI={true}
           provider={provider}
           tokenList={tokenList.tokens}
-          brandedFooter={false}
           dialog={dialogRef.current}
           theme={{
             ...darkTheme,
