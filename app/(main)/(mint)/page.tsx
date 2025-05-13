@@ -41,7 +41,7 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col gap-4 [&_.input]:h-14 [&_.input]:text-right [&_.input]:text-lg">
+            <div className="flex flex-col gap-4 **:data-[slot=input]:h-14 **:data-[slot=input]:text-right **:data-[slot=input]:text-lg">
               <Form {...form}>
                 <FormField
                   control={form.control}
@@ -51,7 +51,7 @@ export default function Home() {
                       <FormLabel>Collateral</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-2">
-                          <CurrencyInput className="input" {...field} />
+                          <CurrencyInput {...field} />
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button className="h-full">Select Token</Button>
@@ -77,7 +77,7 @@ export default function Home() {
                       <FormLabel>Minted</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-2">
-                          <CurrencyInput className="input" {...field} />
+                          <CurrencyInput {...field} />
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button className="h-full">Select Token</Button>
