@@ -2,11 +2,10 @@
 import { cn } from "@/utils/css";
 import { useCallback, useMemo } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
-import { metaMask } from "wagmi/connectors";
 import { Button, ButtonProps } from "../ui/button";
 
 export const ConnectButton = () => {
-  const { connect } = useConnect();
+  const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
   const account = useAccount();
 
@@ -14,7 +13,7 @@ export const ConnectButton = () => {
     if (account.status === "connected") {
       disconnect();
     } else {
-      connect({ connector: metaMask() });
+      connect({ connector: connectors[0] });
     }
   }, [account.status, connect, disconnect]);
 

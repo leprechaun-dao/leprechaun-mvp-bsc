@@ -1,9 +1,9 @@
 "use client";
+import tokenList from "@/utils/web3/tokenList.json";
 import { Web3Provider } from "@ethersproject/providers";
 import { darkTheme } from "@uniswap/widgets";
 import "@uniswap/widgets/fonts.css";
 import dynamic from "next/dynamic";
-import tokenList from "@/utils/web3/tokenList.json"
 import { useMemo, useRef } from "react";
 import { useWalletClient } from "wagmi";
 

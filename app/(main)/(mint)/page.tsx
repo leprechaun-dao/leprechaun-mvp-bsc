@@ -36,11 +36,10 @@ import {
 import { RussianRuble } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { useAccount, useConnect } from "wagmi";
-import { metaMask } from "wagmi/connectors";
 
 export default function Home() {
   const form = useForm();
-  const { connect } = useConnect();
+  const { connect, connectors } = useConnect();
   const account = useAccount();
 
   return (
@@ -157,7 +156,7 @@ export default function Home() {
             <CardFooter>
               <Button
                 className="w-full"
-                onClick={() => connect({ connector: metaMask() })}
+                onClick={() => connect({ connector: connectors[0] })}
               >
                 Connect
               </Button>
