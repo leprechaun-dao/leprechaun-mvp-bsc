@@ -26,42 +26,50 @@ export const Swap = () => {
   return (
     <>
       <div
-        className="absolute inset-0 m-10 pointer-events-none [&>*]:pointer-events-auto"
+        className="uniswap-dialog absolute w-lg max-w-screen top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 inset-0 pointer-events-none *:pointer-events-auto z-[10]"
         ref={dialogRef}
       ></div>
       <style>
-        {`
-          // This is hack to fix a weird issue with the Uniswap widget
-          .TokenOptions__OnHover-sc-xx1k3q-2 {
-            display: none;
+        {
+          // This is a hack to fix the buggy hover effect on the Uniswap widget
+          `
+          .uniswap-dialog [color='container'] > div > div:nth-child(3) {
+            position: relative;
           }
-        `}
+
+          .uniswap-dialog [color='container'] {
+            height: fit-content;
+          }
+
+        `
+        }
       </style>
-      <SwapWidget
-        hideConnectionUI={true}
-        provider={provider}
-        className="Uniswap"
-        tokenList={tokenList.tokens}
-        brandedFooter={false}
-        dialog={dialogRef.current}
-        theme={{
-          ...darkTheme,
-          container: "#0E0E12",
-          module: "#18181B",
-          outline: "#27272A",
-          networkDefaultShadow: "#B4871233",
+      <div className="uniswap">
+        <SwapWidget
+          hideConnectionUI={true}
+          provider={provider}
+          tokenList={tokenList.tokens}
+          brandedFooter={false}
+          dialog={dialogRef.current}
+          theme={{
+            ...darkTheme,
+            container: "#0E0E12",
+            module: "#18181B",
+            outline: "#27272A",
+            networkDefaultShadow: "#B4871233",
 
-          onAccent: "#27272A",
-          accent: "#FFFFB7",
-          interactive: "#136b3b",
-          onInteractive: "white",
-          accentSoft: "#136b3b",
+            onAccent: "#27272A",
+            accent: "#FFFFB7",
+            interactive: "#136b3b",
+            onInteractive: "white",
+            accentSoft: "#136b3b",
 
-          secondary: "#989898",
-          primary: "#EEEEEE",
-          fontFamily: "var(--font-inter)",
-        }}
-      />
+            secondary: "#989898",
+            primary: "#EEEEEE",
+            fontFamily: "var(--font-inter)",
+          }}
+        />
+      </div>
     </>
   );
 };
