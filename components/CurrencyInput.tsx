@@ -9,7 +9,7 @@ const defaultFormatter = new Intl.NumberFormat("en-US", {
 
 export const CurrencyInput = ({
   formatter = defaultFormatter,
-  placeholder = "$0.00",
+  placeholder = "0.00",
   onChange,
   ...props
 }: {

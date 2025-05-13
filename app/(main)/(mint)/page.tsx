@@ -19,12 +19,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Slider } from "@/components/ui/slider";
 import {
   Table,
   TableBody,
@@ -33,7 +41,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RussianRuble } from "lucide-react";
+import { ChevronDown, EllipsisVertical, RussianRuble } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useAccount, useConnect } from "wagmi";
 
@@ -42,20 +51,48 @@ export default function Home() {
   const { connect, connectors } = useConnect();
   const account = useAccount();
 
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+
+  const depositForm = useForm();
   return (
     <div className="flex flex-col min-h-screen w-full">
+      <Dialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen}>
+        <DialogContent>
+          <DialogContent>
+            <DialogTitle>Deposit</DialogTitle>
+            <DialogDescription>
+              Enter the amount of tokens you want to deposit.
+            </DialogDescription>
+            <Form {...depositForm}>
+              <FormField
+                control={depositForm.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Amount</FormLabel>
+                    <FormControl>
+                      <Input placeholder="0" type="number" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </Form>
+          </DialogContent>
+        </DialogContent>
+      </Dialog>
+
       <Header activeRoute="mint" />
       <main className="flex flex-col gap-5 flex-1 items-center justify-center mb-[20vh] px-6">
-        <Card className="w-lg">
-          <CardHeader>
-            <CardTitle>Mint</CardTitle>
-            <CardDescription>
-              Enter the amount of collateral and minted tokens.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4 **:data-[slot=input]:h-14 **:data-[slot=input]:text-right **:data-[slot=input]:text-lg">
-              <Form {...form}>
+        <Card className="w-2xl">
+          <Form {...form}>
+            <CardHeader>
+              <CardTitle>Mint</CardTitle>
+              <CardDescription>
+                Enter the amount of collateral and minted tokens.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-4 **:data-[slot=input]:h-14 **:data-[slot=input]:text-right **:data-[slot=input]:text-lg">
                 <FormField
                   control={form.control}
                   name="colateral"
@@ -67,7 +104,16 @@ export default function Home() {
                           <CurrencyInput {...field} />
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button className="h-full">Select Token</Button>
+                              <Button className="h-full group w-32 relative">
+                                <span className="hidden">Select Token</span>
+                                <span className="group-hover:block hidden">
+                                  Change Token
+                                </span>
+                                <span className="group-hover:hidden flex items-center gap-1">
+                                  ETH
+                                  <ChevronDown className="size-3" />
+                                </span>
+                              </Button>
                             </DialogTrigger>
                             <DialogContent>
                               <DialogTitle>Token Selector</DialogTitle>
@@ -108,12 +154,45 @@ export default function Home() {
                     </FormItem>
                   )}
                 />
-              </Form>
-            </div>
-          </CardContent>
+                <FormField
+                  control={form.control}
+                  name="collateral-ratio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Collateral Ratio</FormLabel>
+                      <FormControl>
+                        <Slider
+                          className="mt-2"
+                          min={150}
+                          max={250}
+                          step={50}
+                          {...field}
+                        />
+
+                        {/* 150, 200, 250 */}
+                      </FormControl>
+                      <span className="flex flex-row justify-between text-neutral-400">
+                        <span>150%</span>
+                        <span>200%</span>
+                        <span>250%</span>
+                      </span>
+                    </FormItem>
+                  )}
+                />
+                <Button
+                  disabled={account.status !== "connected"}
+                  className="mt-5"
+                  type="submit"
+                >
+                  Mint
+                </Button>
+              </div>
+              <CardFooter></CardFooter>
+            </CardContent>
+          </Form>
         </Card>
 
-        <Card className="w-lg">
+        <Card className="w-2xl">
           <CardHeader>
             <CardTitle>Your Positions</CardTitle>
             <CardDescription>
@@ -127,18 +206,37 @@ export default function Home() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Symbol</TableHead>
+                    <TableHead>Asset</TableHead>
+                    <TableHead>Collateral</TableHead>
                     <TableHead>Amount</TableHead>
-                    <TableHead>Price</TableHead>
+                    <TableHead>Current Price</TableHead>
+                    <TableHead>Liq. Price</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="flex gap-1 items-center *:[svg]:size-4">
+                    <TableCell className="flex h-full gap-1 items-center *:[svg]:size-4">
                       <RussianRuble /> RUB
                     </TableCell>
+                    <TableCell>1.04 BTC</TableCell>
                     <TableCell>5</TableCell>
-                    <TableCell>$11.00 USD</TableCell>
+                    <TableCell>$5.00</TableCell>
+                    <TableCell>$11.00</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger>
+                          <EllipsisVertical className="size-3" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem
+                            onClick={() => setDepositDialogOpen(true)}
+                          >
+                            Deposit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>Withdrawal</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
