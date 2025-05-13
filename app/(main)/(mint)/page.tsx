@@ -1,5 +1,5 @@
 "use client";
-import { CurrencyInput } from "@/components/CurrencyInput";
+import { DecimalInput } from "@/components/DecimalInput";
 import { Header } from "@/components/layout/header";
 import { TokenSelector, tokensMock } from "@/components/TokenSelector";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,6 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import {
   Table,
@@ -45,6 +44,7 @@ import { ChevronDown, EllipsisVertical, RussianRuble } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useAccount, useConnect } from "wagmi";
+import { DepositDialog } from "./dialogs/deposit";
 
 export default function Home() {
   const form = useForm();
@@ -52,34 +52,12 @@ export default function Home() {
   const account = useAccount();
 
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
-
-  const depositForm = useForm();
   return (
     <div className="flex flex-col min-h-screen w-full">
-      <Dialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen}>
-        <DialogContent>
-          <DialogContent>
-            <DialogTitle>Deposit</DialogTitle>
-            <DialogDescription>
-              Enter the amount of tokens you want to deposit.
-            </DialogDescription>
-            <Form {...depositForm}>
-              <FormField
-                control={depositForm.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Amount</FormLabel>
-                    <FormControl>
-                      <Input placeholder="0" type="number" {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </Form>
-          </DialogContent>
-        </DialogContent>
-      </Dialog>
+      <DepositDialog
+        open={depositDialogOpen}
+        onOpenChange={setDepositDialogOpen}
+      />
 
       <Header activeRoute="mint" />
       <main className="flex flex-col gap-5 flex-1 items-center justify-center mb-[20vh] px-6">
@@ -101,7 +79,7 @@ export default function Home() {
                       <FormLabel>Collateral</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-2">
-                          <CurrencyInput {...field} />
+                          <DecimalInput {...field} />
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button className="h-full group w-32 relative">
@@ -136,7 +114,7 @@ export default function Home() {
                       <FormLabel>Minted</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-2">
-                          <CurrencyInput {...field} />
+                          <DecimalInput {...field} />
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button className="h-full">Select Token</Button>
