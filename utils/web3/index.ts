@@ -1,6 +1,6 @@
-import erc20 from "@/utils/abis/ERC20";
+import { ERC20ABI } from "@/utils/abis/ERC20";
 import ico from "@/utils/abis/ICO.json";
-import { icoContract, lprContract, usdcContract } from "@/utils/constants";
+import { icoAddress, lprAddress, usdcAddress } from "@/utils/constants";
 import { ethers, type providers } from "ethers";
 
 export function getABI(contract: string) {
@@ -9,7 +9,7 @@ export function getABI(contract: string) {
     case "usdc":
     case "usdt":
     case "lpr":
-      return erc20;
+      return ERC20ABI;
     case "ico":
       return ico;
     default:
@@ -20,11 +20,11 @@ export function getABI(contract: string) {
 export function getContractAddress(contractName: string): string {
   switch (contractName.toLowerCase()) {
     case "usdc":
-      return usdcContract;
+      return usdcAddress;
     case "lpr":
-      return lprContract;
+      return lprAddress;
     case "ico":
-      return icoContract;
+      return icoAddress;
     default:
       return "";
   }
@@ -43,10 +43,10 @@ export async function callGetter(
       _provider !== null
         ? _provider
         : // TODO: @diegoxter check this later, I had to downgrade ethers to 5.7.0 and it broke this line
-          // eslint-disable-next-line
-          // @ts-ignore
-          // eslint-disable-next-line
-          new ethers.BrowserProvider((window as any).ethereum);
+        // eslint-disable-next-line
+        // @ts-ignore
+        // eslint-disable-next-line
+        new ethers.BrowserProvider((window as any).ethereum);
     const contract = new ethers.Contract(
       getContractAddress(contractName),
       getABI(contractName),
@@ -82,7 +82,7 @@ export async function bulkCallGetters(
       // TODO: @diegoxter check this later, I had to downgrade ethers to 5.7.0 and it broke this line
       // eslint-disable-next-line
       // @ts-ignore
-      // eslint-disable-next-line
+
       provider,
     );
     results.push(res !== null ? res : 0);

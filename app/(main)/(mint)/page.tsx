@@ -41,14 +41,14 @@ import { metaMask } from "wagmi/connectors";
 import * as constants from "@/utils/constants";
 import { useMemo } from "react";
 
-const sDOWContract = {
-  address: constants.sDOWAddress,
-  abi: constants.SyntheticAssetABI,
-} as const
-const positionManagerContract = {
-  address: constants.PositionManagerAddress,
-  abi: constants.PositionManagerABI,
-} as const
+// const sDOWContract = {
+//   address: constants.sDOWAddress,
+//   abi: constants.SyntheticAssetABI,
+// } as const
+// const positionManagerContract = {
+//   address: constants.PositionManagerAddress,
+//   abi: constants.PositionManagerABI,
+// } as const
 const leprechaunFactoryContract = {
   address: constants.LeprechaunFactoryAddress,
   abi: constants.LeprechaunFactoryABI,
@@ -76,7 +76,7 @@ export default function Home() {
   }, [assetCount])
 
   const { data: assetAddressList } = useReadContracts({
-    // @ts-ignore
+    // @ts-expect-error we know this calls work
     contracts: calls,
     query: {
       enabled: calls.length > 0,
@@ -95,14 +95,14 @@ export default function Home() {
     });
   }, [assetAddressList]);
 
-  // @ts-ignore
+  // @ts-expect-error we know this calls work
   const { data: assetDataList } = useReadContracts({
-    // @ts-ignore
+    // @ts-expect-error we know this calls work
     contracts: addressesCalls,
     query: {
       enabled: addressesCalls.length > 0,
     },
-  })  as unknown as { result: Token }[];
+  }) as unknown as { result: Token }[];
 
   // TODO add icons and reactivity to the TokenSelector
   console.log(assetDataList)
@@ -210,24 +210,24 @@ export default function Home() {
             )}
             {(account.status === "disconnected" ||
               account.status === "connecting") && (
-              <p>
-                Connect your wallet to see your positions. If you don&apos;t
-                have a wallet, you can create one using MetaMask.
-              </p>
-            )}
+                <p>
+                  Connect your wallet to see your positions. If you don&apos;t
+                  have a wallet, you can create one using MetaMask.
+                </p>
+              )}
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-            <CardFooter>
-              <Button
-                className="w-full"
-                // TODO: Should we add more connectors?
-                onClick={() => connect({ connector: metaMask() })}
-              >
-                Connect
-              </Button>
-            </CardFooter>
-          )}
+              <CardFooter>
+                <Button
+                  className="w-full"
+                  // TODO: Should we add more connectors?
+                  onClick={() => connect({ connector: metaMask() })}
+                >
+                  Connect
+                </Button>
+              </CardFooter>
+            )}
         </Card>
       </main>
     </div>
