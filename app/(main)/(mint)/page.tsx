@@ -7,6 +7,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -34,9 +35,13 @@ import {
 } from "@/components/ui/table";
 import { RussianRuble } from "lucide-react";
 import { useForm } from "react-hook-form";
+import { useAccount, useConnect } from "wagmi";
+import { metaMask } from "wagmi/connectors";
 
 export default function Home() {
   const form = useForm();
+  const { connect } = useConnect();
+  const account = useAccount();
 
   return (
     <div className="flex flex-col min-h-screen w-full">
@@ -116,9 +121,10 @@ export default function Home() {
               These are the positions you currently have for the connected
               wallet.
             </CardDescription>
-            {/* TODO: Add button for wallet connection */}
+          </CardHeader>
 
-            <CardContent>
+          <CardContent>
+            {account.status === "connected" && (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -137,8 +143,27 @@ export default function Home() {
                   </TableRow>
                 </TableBody>
               </Table>
-            </CardContent>
-          </CardHeader>
+            )}
+            {(account.status === "disconnected" ||
+              account.status === "connecting") && (
+              <p>
+                Connect your wallet to see your positions. If you don&apos;t
+                have a wallet, you can create one using MetaMask.
+              </p>
+            )}
+          </CardContent>
+          {(account.status === "disconnected" ||
+            account.status === "connecting") && (
+            <CardFooter>
+              <Button
+                className="w-full"
+                // TODO: Should we add more connectors?
+                onClick={() => connect({ connector: metaMask() })}
+              >
+                Connect
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       </main>
     </div>

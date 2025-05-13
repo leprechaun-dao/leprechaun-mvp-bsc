@@ -1,7 +1,7 @@
 import { cn } from "@/utils/css";
 import Image from "next/image";
 import Link from "next/link";
-import { ConnectButton } from "../web3/connectButton";
+import { ConnectButton } from "../web3/connect-button";
 
 const routes = {
   mint: {
@@ -49,7 +49,6 @@ export const Header = ({
           </Link>
         ))}
       </div>
-
 
       <ConnectButton />
     </header>
