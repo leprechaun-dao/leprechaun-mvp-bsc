@@ -360,12 +360,12 @@ export default function Home() {
         args: [positionManagerAddress, cleanCollateralAmount],
       });
 
-      await allowanceAndBalanceContract.refetch();
+
     } else {
       const abi = constants.PositionManagerABI;
 
       // createPosition
-      return writeContractAsync({
+      await writeContractAsync({
         abi,
         address: positionManagerAddress,
         functionName: "createPosition",
@@ -379,6 +379,8 @@ export default function Home() {
         ],
       });
     }
+
+    await allowanceAndBalanceContract.refetch();
   });
 
   // @ts-expect-error types dont matter here
@@ -417,6 +419,7 @@ export default function Home() {
   }
 
   const [collateralValue, setCollateralValue] = useState<bigint | null>(null);
+  const [synthAmountToBeMinted, setSynthAmountToBeMinted] = useState<bigint | null>(null);
 
   const handleCollateralAmountChange = useDebouncedCallback(
     async (value: number) => {
@@ -451,7 +454,7 @@ export default function Home() {
       });
 
       setCollateralValue(result[1]);
-
+      setSynthAmountToBeMinted(result[0])
       form.setValue("mintAmount", Number(newAmount), {
         shouldValidate: true,
       });
@@ -627,7 +630,13 @@ export default function Home() {
                               hidden: !form.watch("mint"),
                             })}
                           >
-                            ($0.00)
+                            (
+                            {(
+                              Number(synthAmountToBeMinted) /
+                              10 ** 18
+                            ).toLocaleString(undefined, {
+                              maximumFractionDigits: 2,
+                            })}{" "} ${form.getValues().mint.symbol})
                           </span>
                         </span>
                       </FormLabel>
@@ -726,9 +735,9 @@ export default function Home() {
                   onClick={handleSubmitMint}
                 >
                   {collateralWatched &&
-                  allowance &&
-                  cleanCollateralAmount &&
-                  allowance >= cleanCollateralAmount
+                    allowance &&
+                    cleanCollateralAmount &&
+                    allowance >= cleanCollateralAmount
                     ? "Mint"
                     : "Approve"}
                 </Button>
@@ -829,23 +838,23 @@ export default function Home() {
             )}
             {(account.status === "disconnected" ||
               account.status === "connecting") && (
-              <p>
-                Connect your wallet to see your positions. If you don&apos;t
-                have a wallet, you can create one using MetaMask.
-              </p>
-            )}
+                <p>
+                  Connect your wallet to see your positions. If you don&apos;t
+                  have a wallet, you can create one using MetaMask.
+                </p>
+              )}
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-            <CardFooter>
-              <Button
-                className="w-full"
-                onClick={() => connect({ connector: connectors[0] })}
-              >
-                Connect
-              </Button>
-            </CardFooter>
-          )}
+              <CardFooter>
+                <Button
+                  className="w-full"
+                  onClick={() => connect({ connector: connectors[0] })}
+                >
+                  Connect
+                </Button>
+              </CardFooter>
+            )}
         </Card>
       </main>
     </div>
