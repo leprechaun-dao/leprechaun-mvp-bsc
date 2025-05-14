@@ -15,14 +15,14 @@ export const TokenSelector = ({
   onSelect?: (token: SyntheticAssetInfo) => unknown;
 }) => {
   return (
-    <Command className="**:data-[slot=command-input-wrapper]:h-15">
+    <Command className="**:data-[slot=command-input-wrapper]:h-10">
       <CommandInput />
       <CommandEmpty>No tokens found.</CommandEmpty>
       <CommandList>
         {tokens.map((token) => (
           <CommandItem
             keywords={[token.name, token.tokenAddress]}
-            className="h-15 rounded-none"
+            className="h-10 rounded-none"
             key={token.tokenAddress}
             value={token.tokenAddress}
             onSelect={() => {
@@ -32,7 +32,6 @@ export const TokenSelector = ({
             <span>{token.icon}</span>
             <span>{token.name}</span>
             {token.balance && <span>{token.balance.toString()}</span>}
-
           </CommandItem>
         ))}
       </CommandList>
