@@ -8,6 +8,9 @@ export interface SyntheticAssetInfo {
   auctionDiscount?: bigint;
   multiplier?: bigint;
   isActive: boolean;
+
+  balance?: bigint;
+  decimals?: number;
   value?: bigint;
   assetID?: string;
   label?: string;

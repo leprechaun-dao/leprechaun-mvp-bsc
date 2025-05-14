@@ -51,9 +51,9 @@ import {
   RussianRuble,
   SaudiRiyal, SwissFranc, VaultIcon
 } from "lucide-react";
-import { useState, useEffect, ReactNode } from "react";
+import { useState, useMemo, ReactNode } from "react";
 import { useForm } from "react-hook-form";
-import { useAccount, useReadContract, useConnect } from "wagmi";
+import { useAccount, useReadContract, useReadContracts, useConnect } from "wagmi";
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
@@ -91,12 +91,14 @@ const collateralAssets: SyntheticAssetInfo[] = [
     name: "Bitcoin",
     symbol: "cbBTC",
     isActive: true,
+    decimals: 8,
     icon: <SwissFranc />,
   },
   {
     tokenAddress: constants.mWETHAddress,
     name: "Wrapped Ether",
     symbol: "wETH",
+    decimals: 18,
     isActive: true,
     icon: <SaudiRiyal />,
   },
@@ -105,6 +107,7 @@ const collateralAssets: SyntheticAssetInfo[] = [
     name: "USDC",
     symbol: "USDC",
     isActive: true,
+    decimals: 6,
     icon: <RussianRuble />,
   },
 ];
@@ -114,10 +117,18 @@ const collateralAssets: SyntheticAssetInfo[] = [
 //   address: constants.sDOWAddress,
 //   abi: constants.SyntheticAssetABI,
 // } as const
-// const positionManagerContract = {
-//   address: constants.PositionManagerAddress,
-//   abi: constants.PositionManagerABI,
-// } as const
+const mUSDCContract = {
+  address: constants.mUSDCAddress,
+  abi: constants.ERC20ABI,
+} as const
+const mWETHContract = {
+  address: constants.mWETHAddress,
+  abi: constants.ERC20ABI,
+} as const
+const mWBTCContract = {
+  address: constants.mWBTCAddress,
+  abi: constants.ERC20ABI,
+} as const
 const lensContract = {
   address: constants.LENSAddress,
   abi: constants.LeprechaunLensABI,
@@ -130,34 +141,68 @@ export default function Home() {
 
   const { data: syntheticAssets } = useReadContract({
     ...lensContract,
-    functionName: 'getAllSyntheticAssets',
+    functionName: 'getAllSyntheticAssets'
   })
 
-  const [formattedAssets, setFormattedAssets] = useState<SyntheticAssetInfo[]>([]);
-  useEffect(() => {
-    if (!syntheticAssets || (syntheticAssets as SyntheticAssetInfo[]).length === 0) return;
+  const { data } = useReadContracts({
+    contracts: [
+      {
+        ...mUSDCContract,
+        functionName: "balanceOf",
+        args: [account.address]
+      },
+      {
+        ...mWETHContract,
+        functionName: "balanceOf",
+        args: [account.address]
+      },
+      {
+        ...mWBTCContract,
+        functionName: "balanceOf",
+        args: [account.address]
+      },
+    ],
+    query: {
+      enabled: !!account.address,
+    },
+  })
+  const [mUSDCBalance, mWETHBalance, mWBTCBalance] = data || []
+
+  const formattedAssets = useMemo(() => {
+    if (!syntheticAssets || (syntheticAssets as SyntheticAssetInfo[]).length === 0) return [];
+
     const iconMap: Record<string, ReactNode> = {
       "CHF": <SwissFranc />,
       "sDOW": <RussianRuble />,
       "SRL": <SaudiRiyal />
     };
 
-    const transformed = (syntheticAssets as SyntheticAssetInfo[])
-      .map((item: SyntheticAssetInfo) => {
+    return (syntheticAssets as SyntheticAssetInfo[]).map((item: SyntheticAssetInfo) => ({
+      tokenAddress: item.tokenAddress,
+      name: item.name,
+      symbol: item.symbol,
+      minCollateralRatio: item.minCollateralRatio,
+      auctionDiscount: item.auctionDiscount,
+      isActive: item.isActive,
+      icon: iconMap[item.name] || <VaultIcon />,
+    }));
 
-        return {
-          tokenAddress: item.tokenAddress,
-          name: item.name,
-          symbol: item.symbol,
-          minCollateralRatio: item.minCollateralRatio,
-          auctionDiscount: item.auctionDiscount,
-          isActive: item.isActive,
-          icon: iconMap[item.name] || <VaultIcon />,
-        };
-      });
-
-    setFormattedAssets(transformed);
   }, [syntheticAssets]);
+
+  const collateralAssetsWithBalance = useMemo(() => {
+    if (mUSDCBalance?.status !== "success" ||
+      mWBTCBalance?.status !== "success" ||
+      mWETHBalance?.status !== "success") {
+      return collateralAssets;
+    }
+
+    const tempArray = [mWBTCBalance, mWETHBalance, mUSDCBalance];
+    return collateralAssets.map((col, i) => ({
+      ...col,
+      balance: tempArray[i].result
+    }));
+
+  }, [mUSDCBalance, mWBTCBalance, mWETHBalance]);
 
   // TODO: We need to get the token object in here
   const [mint, setMintToken] = useState<{ symbol: string }>();
@@ -228,7 +273,7 @@ export default function Home() {
                                 Select the token you want to use as collateral.
                               </DialogDescription>
                               <TokenSelector
-                                tokens={collateralAssets}
+                                tokens={collateralAssetsWithBalance}
                                 onSelect={(token) => {
                                   setCollateral(token);
                                   setCollateralTokenSelectorOpen(false);

@@ -31,6 +31,7 @@ export const TokenSelector = ({
           >
             <span>{token.icon}</span>
             <span>{token.name}</span>
+            {token.balance && <span>{token.balance.toString()}</span>}
 
           </CommandItem>
         ))}
