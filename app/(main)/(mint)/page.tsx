@@ -444,7 +444,7 @@ export default function Home() {
                     <TableCell>$11.00</TableCell>
                     <TableCell>
                       <DropdownMenu>
-                        <DropdownMenuTrigger>
+                        <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="px-1">
                             <EllipsisVertical className="size-4" />
                           </Button>
