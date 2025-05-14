@@ -4,6 +4,7 @@ import { Web3Provider } from "@ethersproject/providers";
 import { darkTheme } from "@uniswap/widgets";
 import "@uniswap/widgets/fonts.css";
 import dynamic from "next/dynamic";
+import Script from "next/script";
 import { useMemo, useRef } from "react";
 import { useWalletClient } from "wagmi";
 
@@ -25,6 +26,10 @@ export const Swap = () => {
   const dialogRef = useRef<HTMLDivElement>(null);
   return (
     <>
+      {/* This is a hack to fix a Uniswap Widget issue */}
+      <Script strategy="beforeInteractive" id="test">
+        {`globalThis.Browser = { T: () => {} };`}
+      </Script>
       <div
         className="uniswap-dialog absolute w-lg max-w-screen top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 inset-0 pointer-events-none *:pointer-events-auto z-[10]"
         ref={dialogRef}
