@@ -23,7 +23,7 @@ export const ClosePositionDialog = (props: DialogProps) => {
       },
     });
     await new Promise((r) => setTimeout(r, 1000));
-    toast("Transaction confirmed.", {
+    toast.success("Transaction confirmed.", {
       action: {
         label: (
           <div className="flex gap-2 items-center">
