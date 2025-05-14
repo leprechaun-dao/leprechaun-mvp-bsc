@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { DialogProps } from "@radix-ui/react-dialog";
+import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -68,6 +69,8 @@ export const WithdrawalDialog = (props: DialogProps) => {
         },
       },
     });
+
+    props.onOpenChange?.(false);
   });
 
   useEffect(() => {
@@ -106,7 +109,13 @@ export const WithdrawalDialog = (props: DialogProps) => {
             <DialogClose asChild>
               <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSubmit}>Withdrawal</Button>
+            <Button onClick={handleSubmit}>
+              {form.formState.isSubmitting ? (
+                <Loader2 className="size-4 mx-6 animate-spin" />
+              ) : (
+                "Withdrawal"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
