@@ -297,82 +297,84 @@ export default function Home() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col gap-4 **:data-[slot=input]:h-14 **:data-[slot=input]:text-right **:data-[slot=input]:text-lg">
-                  <FormField
-                    control={form.control}
-                    name="collateral-amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Collateral ($0.00)</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center gap-2">
-                            <DecimalInput {...field} />
-                            <Dialog
-                              open={collateralTokenSelectorOpen}
-                              onOpenChange={setCollateralTokenSelectorOpen}
-                            >
-                              <DialogTrigger asChild>
-                                <TokenSelectorButton
-                                  selectedSymbol={collateral?.symbol}
-                                />
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogTitle>Token Selector</DialogTitle>
-                                <DialogDescription>
-                                  Select the token you want to use as
-                                  collateral.
-                                </DialogDescription>
-                                <TokenSelector
-                                  tokens={collateralAssetsWithBalance}
-                                  onSelect={(token) => {
-                                    setCollateral({ symbol: token.symbol! });
-                                    setCollateralTokenSelectorOpen(false);
-                                  }}
-                                />
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="mint-amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Minted ($0.00)</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center gap-2">
-                            <DecimalInput {...field} />
-                            <Dialog
-                              open={mintTokenSelectorOpen}
-                              onOpenChange={setMintTokenSelectorOpen}
-                            >
-                              <DialogTrigger asChild>
-                                <TokenSelectorButton
-                                  selectedSymbol={mint?.symbol}
-                                />
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogTitle>Token Selector</DialogTitle>
-                                <DialogDescription>
-                                  Select the token you want to mint.
-                                </DialogDescription>
-                                <TokenSelector
-                                  tokens={formattedAssets}
-                                  onSelect={(token) => {
-                                    setMintToken({ symbol: token.symbol! });
-                                    setMintTokenSelectorOpen(false);
-                                  }}
-                                />
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                <div className="flex flex-col gap-4 **:data-[slot=input]:text-lg">
+                  <div className="flex items-end gap-2">
+                    <FormField
+                      control={form.control}
+                      name="collateral-amount"
+                      render={({ field }) => (
+                        <FormItem className="w-full">
+                          <FormLabel>Collateral ($0.00)</FormLabel>
+                          <FormControl>
+                            <DecimalInput className="h-14" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Dialog
+                      open={collateralTokenSelectorOpen}
+                      onOpenChange={setCollateralTokenSelectorOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <TokenSelectorButton
+                          className="h-14"
+                          selectedSymbol={collateral?.symbol}
+                        />
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogTitle>Token Selector</DialogTitle>
+                        <DialogDescription>
+                          Select the token you want to use as collateral.
+                        </DialogDescription>
+                        <TokenSelector
+                          tokens={collateralAssetsWithBalance}
+                          onSelect={(token) => {
+                            setCollateral({ symbol: token.symbol! });
+                            setCollateralTokenSelectorOpen(false);
+                          }}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <FormField
+                      control={form.control}
+                      name="mint-amount"
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>Minted ($0.00)</FormLabel>
+                          <FormControl>
+                            <DecimalInput className="h-14" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Dialog
+                      open={mintTokenSelectorOpen}
+                      onOpenChange={setMintTokenSelectorOpen}
+                    >
+                      <DialogTrigger asChild>
+                        <TokenSelectorButton
+                          className="h-14"
+                          selectedSymbol={mint?.symbol}
+                        />
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogTitle>Token Selector</DialogTitle>
+                        <DialogDescription>
+                          Select the token you want to mint.
+                        </DialogDescription>
+                        <TokenSelector
+                          tokens={formattedAssets}
+                          onSelect={(token) => {
+                            setMintToken({ symbol: token.symbol! });
+                            setMintTokenSelectorOpen(false);
+                          }}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+
                   <FormField
                     control={form.control}
                     name="collateral-ratio"
