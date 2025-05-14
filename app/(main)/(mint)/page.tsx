@@ -1,4 +1,5 @@
 "use client";
+import { wagmiConfig } from "@/app/wagmiConfig";
 import { DecimalInput } from "@/components/DecimalInput";
 import { Header } from "@/components/layout/header";
 import { TokenSelector } from "@/components/TokenSelector";
@@ -44,6 +45,7 @@ import {
 import * as constants from "@/utils/constants";
 import { cn } from "@/utils/css";
 import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
+import { readContract } from "@wagmi/core";
 import {
   BanknoteArrowDown,
   BanknoteArrowUp,
@@ -66,8 +68,6 @@ import {
   useReadContracts,
   useWriteContract,
 } from "wagmi";
-import { readContract } from '@wagmi/core'
-import { wagmiConfig } from "@/app/wagmiConfig";
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
@@ -229,24 +229,26 @@ export default function Home() {
   const [openDialog, setOpenDialog] = useState<
     "deposit" | "withdrawal" | "close-position" | null
   >(null);
-  const { writeContract } = useWriteContract()
+  const { writeContract } = useWriteContract();
 
   const handleSubmitMint = form.handleSubmit(async (data) => {
-    const abi = constants.PositionManagerABI
-    const address = constants.PositionManagerAddress
+    const abi = constants.PositionManagerABI;
+    const address = constants.PositionManagerAddress;
 
     // createPosition
     writeContract({
       abi,
       address: address,
-      functionName: 'createPosition',
+      functionName: "createPosition",
       args: [
         data.mint.tokenAddress,
         data.collateral.tokenAddress,
-        BigInt(Math.floor(data.collateralAmount * 10 ** data.collateral.decimals)),
-        BigInt(Math.floor(data.mintAmount * 10 ** 18))
+        BigInt(
+          Math.floor(data.collateralAmount * 10 ** data.collateral.decimals),
+        ),
+        BigInt(Math.floor(data.mintAmount * 10 ** 18)),
       ],
-    })
+    });
     toast("Transaction sent.", {
       action: {
         label: "View on Etherscan",
@@ -367,33 +369,46 @@ export default function Home() {
                             onChange={(e) => {
                               field.onChange(e);
                               // const newValue = e;
-                              const mint = form.getValues().mint
-                              const collateral = form.getValues().collateral
-                              const abi = constants.LeprechaunLensABI
-                              const address = constants.LENSAddress
+                              const mint = form.getValues().mint;
+                              const collateral = form.getValues().collateral;
+                              const abi = constants.LeprechaunLensABI;
+                              const address = constants.LENSAddress;
 
-                              const index = collateralAssetsWithBalance.findIndex(
-                                (collateralAsset) =>
-                                  collateralAsset.symbol === collateral?.symbol,
-                              );
+                              const index =
+                                collateralAssetsWithBalance.findIndex(
+                                  (collateralAsset) =>
+                                    collateralAsset.symbol ===
+                                    collateral?.symbol,
+                                );
                               const asset = collateralAssetsWithBalance[index];
                               const inputAmount = BigInt(
                                 Math.floor(Number(e) * 10 ** asset.decimals!),
                               );
 
+                              if (!mint || !collateral) return;
+
                               readContract(wagmiConfig, {
                                 abi,
                                 address: address,
-                                functionName: 'getMintableAmount',
-                                args: [mint.tokenAddress, collateral.tokenAddress, inputAmount]
+                                functionName: "getMintableAmount",
+                                args: [
+                                  mint.tokenAddress,
+                                  collateral.tokenAddress,
+                                  inputAmount,
+                                ],
                               }).then((res) => {
-                                const result = res as bigint[]
+                                const result = res as bigint[];
                                 // we assuming the decimals here
-                                const newAmount = Number(result[0]) / 10 ** 18
-                                console.log(result[0], newAmount)
+                                const newAmount = Number(result[0]) / 10 ** 18;
+                                form.setValue("mintAmount", newAmount, {
+                                  shouldValidate: true,
+                                });
+                                // console.log(result[0], newAmount)
 
-                                form.setValue("mintAmount", Number(newAmount), { shouldValidate: true })
-                              })
+                                form.setValue("mintAmount", Number(newAmount), {
+                                  shouldValidate: true,
+                                });
+                              });
                             }}
                           />
                         </FormControl>
@@ -568,6 +583,26 @@ export default function Home() {
                 >
                   Mint
                 </Button>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={account.status !== "connected"}
+                  >
+                    A
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={account.status !== "connected"}
+                  >
+                    B
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={account.status !== "connected"}
+                  >
+                    C
+                  </Button>
+                </div>
               </div>
               <CardFooter></CardFooter>
             </CardContent>
@@ -639,23 +674,23 @@ export default function Home() {
             )}
             {(account.status === "disconnected" ||
               account.status === "connecting") && (
-                <p>
-                  Connect your wallet to see your positions. If you don&apos;t
-                  have a wallet, you can create one using MetaMask.
-                </p>
-              )}
+              <p>
+                Connect your wallet to see your positions. If you don&apos;t
+                have a wallet, you can create one using MetaMask.
+              </p>
+            )}
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-              <CardFooter>
-                <Button
-                  className="w-full"
-                  onClick={() => connect({ connector: connectors[0] })}
-                >
-                  Connect
-                </Button>
-              </CardFooter>
-            )}
+            <CardFooter>
+              <Button
+                className="w-full"
+                onClick={() => connect({ connector: connectors[0] })}
+              >
+                Connect
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       </main>
     </div>
