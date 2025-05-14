@@ -30,7 +30,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
 } from "@/components/ui/form";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -44,7 +44,6 @@ import {
 import * as constants from "@/utils/constants";
 import { cn } from "@/utils/css";
 import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
-import { yupResolver } from "@hookform/resolvers/yup";
 import {
   BanknoteArrowDown,
   BanknoteArrowUp,
@@ -66,7 +65,6 @@ import {
   useReadContract,
   useReadContracts,
 } from "wagmi";
-import * as yup from "yup";
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
@@ -145,40 +143,8 @@ const lensContract = {
   abi: constants.LeprechaunLensABI,
 } as const;
 
-const formSchema = yup.object({
-  mintAmount: yup
-    .number()
-    .required("Amount is required")
-    .typeError("Amount must be a number"),
-  collateralAmount: yup
-    .number()
-    .required("Amount is required")
-    .typeError("Amount must be a number"),
-  collateralRatio: yup
-    .number()
-    .min(150, "Collateral Ratio must be at least 150%")
-    .max(250, "Collateral Ratio must be at most 250%")
-    .required("Collateral Ratio is required")
-    .typeError("Collateral Ratio must be a number"),
-  collateral: yup
-    .object({
-      symbol: yup.string().required(),
-    })
-    .required("Collateral is required"),
-  mint: yup
-    .object({
-      symbol: yup.string().required(),
-    })
-    .required("Mint is required"),
-});
-
 export default function Home() {
-  const form = useForm({
-    resolver: yupResolver(formSchema),
-    defaultValues: {
-      collateralRatio: 150,
-    },
-  });
+  const form = useForm();
   const { connect, connectors } = useConnect();
   const account = useAccount();
 
@@ -331,27 +297,41 @@ export default function Home() {
                 <FormField
                   control={form.control}
                   name="collateralAmount"
-                  // @lucastenorio this is non functional with yup
                   rules={{
-                    required: true,
-                    validate: (value) => {
-                      const index = collateralAssetsWithBalance.findIndex(
-                        (collateralAsset) => collateralAsset.symbol === collateral?.symbol
-                      );
-                      const asset = collateralAssetsWithBalance[index];
+                    required: "Amount is required",
+                    validate: {
+                      isNumber: (value) => {
+                        return (
+                          typeof value === "number" || "Amount must be a number"
+                        );
+                      },
+                      isPositive: (value) => {
+                        return value > 0 || "Amount must be greater than 0";
+                      },
+                      withinBalance: (value) => {
+                        const collateral = form.getValues().collateral;
 
-                      const inputAmount = BigInt(Math.floor(Number(value) * 10 ** asset.decimals!));
-                      const assetBalance = asset.balance!;
+                        const index = collateralAssetsWithBalance.findIndex(
+                          (collateralAsset) =>
+                            collateralAsset.symbol === collateral?.symbol,
+                        );
+                        const asset = collateralAssetsWithBalance[index];
 
-                      return (
-                        Number(value) > 0 && inputAmount <= assetBalance
-                      ) || "Amount must be greater than 0 and within balance"
-                    }
+                        const inputAmount = BigInt(
+                          Math.floor(Number(value) * 10 ** asset.decimals!),
+                        );
+                        const assetBalance = asset.balance!;
+
+                        return (
+                          inputAmount <= assetBalance ||
+                          "Amount must be within balance"
+                        );
+                      },
+                    },
                   }}
-                  render={({ field, fieldState }) => (
+                  render={({ field }) => (
                     <FormItem className="w-full">
                       <FormLabel>Collateral ($0.00)</FormLabel>
-                        <FormMessage />
                       <div className="flex items-end gap-2">
                         <FormControl>
                           <DecimalInput
@@ -364,6 +344,9 @@ export default function Home() {
                         <FormField
                           name="collateral"
                           control={form.control}
+                          rules={{
+                            required: true,
+                          }}
                           render={({ field }) => (
                             <Dialog
                               open={collateralTokenSelectorOpen}
@@ -393,15 +376,27 @@ export default function Home() {
                           )}
                         />
                       </div>
-                      <FormMessage>{fieldState.error?.message}</FormMessage>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormField
                   control={form.control}
                   name="mintAmount"
-
-                  render={({ field, fieldState }) => (
+                  rules={{
+                    required: "Amount is required",
+                    validate: {
+                      isNumber: (value) => {
+                        return (
+                          typeof value === "number" || "Amount must be a number"
+                        );
+                      },
+                      isPositive: (value) => {
+                        return value > 0 || "Amount must be greater than 0";
+                      },
+                    },
+                  }}
+                  render={({ field }) => (
                     <FormItem className="flex-1">
                       <FormLabel>Minted ($0.00)</FormLabel>
                       <div className="flex items-end gap-2">
@@ -415,6 +410,9 @@ export default function Home() {
                         <FormField
                           name="mint"
                           control={form.control}
+                          rules={{
+                            required: true,
+                          }}
                           render={({ field }) => (
                             <Dialog
                               open={mintTokenSelectorOpen}
@@ -443,7 +441,7 @@ export default function Home() {
                           )}
                         />
                       </div>
-                      <FormMessage>{fieldState.error?.message}</FormMessage>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -451,6 +449,18 @@ export default function Home() {
                 <FormField
                   control={form.control}
                   name="collateralRatio"
+                  defaultValue={150}
+                  rules={{
+                    required: "Collateral Ratio is required",
+                    min: {
+                      value: 150,
+                      message: "Collateral Ratio must be at least 150%",
+                    },
+                    max: {
+                      value: 250,
+                      message: "Collateral Ratio must be at most 250%",
+                    },
+                  }}
                   render={({ field, fieldState }) => (
                     <FormItem>
                       <FormLabel className="mb-2">Collateral Ratio</FormLabel>
@@ -478,7 +488,7 @@ export default function Home() {
                         <span>200%</span>
                         <span>250%</span>
                       </span>
-                      <FormMessage>{fieldState.error?.message}</FormMessage>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -560,23 +570,23 @@ export default function Home() {
             )}
             {(account.status === "disconnected" ||
               account.status === "connecting") && (
-                <p>
-                  Connect your wallet to see your positions. If you don&apos;t
-                  have a wallet, you can create one using MetaMask.
-                </p>
-              )}
+              <p>
+                Connect your wallet to see your positions. If you don&apos;t
+                have a wallet, you can create one using MetaMask.
+              </p>
+            )}
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-              <CardFooter>
-                <Button
-                  className="w-full"
-                  onClick={() => connect({ connector: connectors[0] })}
-                >
-                  Connect
-                </Button>
-              </CardFooter>
-            )}
+            <CardFooter>
+              <Button
+                className="w-full"
+                onClick={() => connect({ connector: connectors[0] })}
+              >
+                Connect
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       </main>
     </div>
