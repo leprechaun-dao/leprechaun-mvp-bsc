@@ -150,12 +150,12 @@ export default function Home() {
   const account = useAccount();
   const positionManagerAddress = constants.PositionManagerAddress;
 
-  const { data: syntheticAssets } = useReadContract({
+  const synthenticAssetsContract = useReadContract({
     ...lensContract,
     functionName: "getAllSyntheticAssets",
   });
 
-  const { data } = useReadContracts({
+  const allowanceAndBalanceContract = useReadContracts({
     contracts: [
       {
         ...mUSDCContract,
@@ -199,12 +199,12 @@ export default function Home() {
     mUSDCAllowance,
     mWETHAllowance,
     mWBTCAllowance,
-  ] = data || [];
+  ] = allowanceAndBalanceContract.data || [];
 
   const formattedAssets = useMemo(() => {
     if (
-      !syntheticAssets ||
-      (syntheticAssets as SyntheticAssetInfo[]).length === 0
+      !synthenticAssetsContract.data ||
+      (synthenticAssetsContract.data as SyntheticAssetInfo[]).length === 0
     )
       return [];
 
@@ -214,7 +214,7 @@ export default function Home() {
       SRL: <SaudiRiyal />,
     };
 
-    return (syntheticAssets as SyntheticAssetInfo[]).map(
+    return (synthenticAssetsContract.data as SyntheticAssetInfo[]).map(
       (item: SyntheticAssetInfo) => ({
         tokenAddress: item.tokenAddress,
         name: item.name,
@@ -225,7 +225,7 @@ export default function Home() {
         icon: iconMap[item.name] || <VaultIcon />,
       }),
     );
-  }, [syntheticAssets]);
+  }, [synthenticAssetsContract.data]);
 
   const collateralAssetsWithBalance = useMemo(() => {
     if (
@@ -251,7 +251,7 @@ export default function Home() {
     "deposit" | "withdrawal" | "close-position" | null
   >(null);
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
-  const { writeContract } = useWriteContract({
+  const { writeContract, writeContractAsync } = useWriteContract({
     mutation: {
       onSuccess(data) {
         setTxHash(data);
@@ -350,22 +350,24 @@ export default function Home() {
   }, [collateralWatched, mUSDCAllowance, mWBTCAllowance, mWETHAllowance]);
 
   const handleSubmitMint = form.handleSubmit(async (data) => {
-    console.log(data);
+    if (!allowance) return;
 
-    if (allowance! < cleanCollateralAmount!) {
+    if (allowance < cleanCollateralAmount!) {
       const abi = constants.ERC20ABI;
       // approveTokens
-      writeContract({
+      await writeContractAsync({
         abi,
         address: data.collateral.tokenAddress,
         functionName: "approve",
         args: [positionManagerAddress, cleanCollateralAmount],
       });
+
+      await allowanceAndBalanceContract.refetch();
     } else {
       const abi = constants.PositionManagerABI;
 
       // createPosition
-      writeContract({
+      return writeContractAsync({
         abi,
         address: positionManagerAddress,
         functionName: "createPosition",
@@ -419,7 +421,7 @@ export default function Home() {
   const [collateralValue, setCollateralValue] = useState<bigint | null>(null);
 
   const handleCollateralAmountChange = useDebouncedCallback(
-    (value: number) => {
+    async (value: number) => {
       const abi = constants.LeprechaunLensABI;
       const address = constants.LENSAddress;
 
@@ -436,25 +438,24 @@ export default function Home() {
         Math.floor(Number(value) * 10 ** asset.decimals!),
       );
 
-      readContract(wagmiConfig, {
+      const res = await readContract(wagmiConfig, {
         abi,
         address: address,
         functionName: "getMintableAmount",
         args: [mint.tokenAddress, collateral.tokenAddress, inputAmount],
-      }).then((res) => {
-        console.log(res);
-        const result = res as bigint[];
-        // we assuming the decimals here
-        const newAmount = Number(result[0]) / 10 ** 18;
-        form.setValue("mintAmount", newAmount, {
-          shouldValidate: true,
-        });
-        // console.log(result[0], newAmount)
-        setCollateralValue(result[1]);
+      });
 
-        form.setValue("mintAmount", Number(newAmount), {
-          shouldValidate: true,
-        });
+      const result = res as bigint[];
+      // we assuming the decimals here
+      const newAmount = Number(result[0]) / 10 ** 18;
+      form.setValue("mintAmount", newAmount, {
+        shouldValidate: true,
+      });
+
+      setCollateralValue(result[1]);
+
+      form.setValue("mintAmount", Number(newAmount), {
+        shouldValidate: true,
       });
     },
     [],
@@ -633,12 +634,7 @@ export default function Home() {
                       </FormLabel>
                       <div className="flex items-end gap-2">
                         <FormControl>
-                          <DecimalInput
-                            // TODO this is not changing
-                            className="h-14"
-                            {...field}
-                            disabled={!form.watch("mint")}
-                          />
+                          <DecimalInput className="h-14" {...field} disabled />
                         </FormControl>
                         <FormField
                           name="mint"
