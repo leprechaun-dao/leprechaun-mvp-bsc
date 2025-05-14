@@ -30,7 +30,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
+  FormMessage
 } from "@/components/ui/form";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -331,9 +331,27 @@ export default function Home() {
                 <FormField
                   control={form.control}
                   name="collateralAmount"
+                  // @lucastenorio this is non functional with yup
+                  rules={{
+                    required: true,
+                    validate: (value) => {
+                      const index = collateralAssetsWithBalance.findIndex(
+                        (collateralAsset) => collateralAsset.symbol === collateral?.symbol
+                      );
+                      const asset = collateralAssetsWithBalance[index];
+
+                      const inputAmount = BigInt(Math.floor(Number(value) * 10 ** asset.decimals!));
+                      const assetBalance = asset.balance!;
+
+                      return (
+                        Number(value) > 0 && inputAmount <= assetBalance
+                      ) || "Amount must be greater than 0 and within balance"
+                    }
+                  }}
                   render={({ field, fieldState }) => (
                     <FormItem className="w-full">
                       <FormLabel>Collateral ($0.00)</FormLabel>
+                        <FormMessage />
                       <div className="flex items-end gap-2">
                         <FormControl>
                           <DecimalInput
@@ -382,6 +400,7 @@ export default function Home() {
                 <FormField
                   control={form.control}
                   name="mintAmount"
+
                   render={({ field, fieldState }) => (
                     <FormItem className="flex-1">
                       <FormLabel>Minted ($0.00)</FormLabel>
@@ -541,23 +560,23 @@ export default function Home() {
             )}
             {(account.status === "disconnected" ||
               account.status === "connecting") && (
-              <p>
-                Connect your wallet to see your positions. If you don&apos;t
-                have a wallet, you can create one using MetaMask.
-              </p>
-            )}
+                <p>
+                  Connect your wallet to see your positions. If you don&apos;t
+                  have a wallet, you can create one using MetaMask.
+                </p>
+              )}
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-            <CardFooter>
-              <Button
-                className="w-full"
-                onClick={() => connect({ connector: connectors[0] })}
-              >
-                Connect
-              </Button>
-            </CardFooter>
-          )}
+              <CardFooter>
+                <Button
+                  className="w-full"
+                  onClick={() => connect({ connector: connectors[0] })}
+                >
+                  Connect
+                </Button>
+              </CardFooter>
+            )}
         </Card>
       </main>
     </div>
