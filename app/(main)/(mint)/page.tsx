@@ -2,7 +2,6 @@
 import { DecimalInput } from "@/components/DecimalInput";
 import { Header } from "@/components/layout/header";
 import { TokenSelector } from "@/components/TokenSelector";
-import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { Button, ButtonProps } from "@/components/ui/button";
 import {
   Card,
@@ -41,7 +40,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import * as constants from "@/utils/constants";
 import { cn } from "@/utils/css";
+import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import {
   BanknoteArrowDown,
   BanknoteArrowUp,
@@ -49,15 +50,21 @@ import {
   ChevronDown,
   EllipsisVertical,
   RussianRuble,
-  SaudiRiyal, SwissFranc, VaultIcon
+  SaudiRiyal,
+  SwissFranc,
+  VaultIcon,
 } from "lucide-react";
-import { useState, useMemo, ReactNode } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useAccount, useReadContract, useReadContracts, useConnect } from "wagmi";
+import {
+  useAccount,
+  useConnect,
+  useReadContract,
+  useReadContracts,
+} from "wagmi";
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
-import * as constants from "@/utils/constants";
 
 const TokenSelectorButton = ({
   selectedSymbol,
@@ -112,7 +119,6 @@ const collateralAssets: SyntheticAssetInfo[] = [
   },
 ];
 
-
 // const sDOWContract = {
 //   address: constants.sDOWAddress,
 //   abi: constants.SyntheticAssetABI,
@@ -120,19 +126,19 @@ const collateralAssets: SyntheticAssetInfo[] = [
 const mUSDCContract = {
   address: constants.mUSDCAddress,
   abi: constants.ERC20ABI,
-} as const
+} as const;
 const mWETHContract = {
   address: constants.mWETHAddress,
   abi: constants.ERC20ABI,
-} as const
+} as const;
 const mWBTCContract = {
   address: constants.mWBTCAddress,
   abi: constants.ERC20ABI,
-} as const
+} as const;
 const lensContract = {
   address: constants.LENSAddress,
   abi: constants.LeprechaunLensABI,
-} as const
+} as const;
 
 export default function Home() {
   const form = useForm();
@@ -141,67 +147,73 @@ export default function Home() {
 
   const { data: syntheticAssets } = useReadContract({
     ...lensContract,
-    functionName: 'getAllSyntheticAssets'
-  })
+    functionName: "getAllSyntheticAssets",
+  });
 
   const { data } = useReadContracts({
     contracts: [
       {
         ...mUSDCContract,
         functionName: "balanceOf",
-        args: [account.address]
+        args: [account.address],
       },
       {
         ...mWETHContract,
         functionName: "balanceOf",
-        args: [account.address]
+        args: [account.address],
       },
       {
         ...mWBTCContract,
         functionName: "balanceOf",
-        args: [account.address]
+        args: [account.address],
       },
     ],
     query: {
       enabled: !!account.address,
     },
-  })
-  const [mUSDCBalance, mWETHBalance, mWBTCBalance] = data || []
+  });
+  const [mUSDCBalance, mWETHBalance, mWBTCBalance] = data || [];
 
   const formattedAssets = useMemo(() => {
-    if (!syntheticAssets || (syntheticAssets as SyntheticAssetInfo[]).length === 0) return [];
+    if (
+      !syntheticAssets ||
+      (syntheticAssets as SyntheticAssetInfo[]).length === 0
+    )
+      return [];
 
     const iconMap: Record<string, ReactNode> = {
-      "CHF": <SwissFranc />,
-      "sDOW": <RussianRuble />,
-      "SRL": <SaudiRiyal />
+      CHF: <SwissFranc />,
+      sDOW: <RussianRuble />,
+      SRL: <SaudiRiyal />,
     };
 
-    return (syntheticAssets as SyntheticAssetInfo[]).map((item: SyntheticAssetInfo) => ({
-      tokenAddress: item.tokenAddress,
-      name: item.name,
-      symbol: item.symbol,
-      minCollateralRatio: item.minCollateralRatio,
-      auctionDiscount: item.auctionDiscount,
-      isActive: item.isActive,
-      icon: iconMap[item.name] || <VaultIcon />,
-    }));
-
+    return (syntheticAssets as SyntheticAssetInfo[]).map(
+      (item: SyntheticAssetInfo) => ({
+        tokenAddress: item.tokenAddress,
+        name: item.name,
+        symbol: item.symbol,
+        minCollateralRatio: item.minCollateralRatio,
+        auctionDiscount: item.auctionDiscount,
+        isActive: item.isActive,
+        icon: iconMap[item.name] || <VaultIcon />,
+      }),
+    );
   }, [syntheticAssets]);
 
   const collateralAssetsWithBalance = useMemo(() => {
-    if (mUSDCBalance?.status !== "success" ||
+    if (
+      mUSDCBalance?.status !== "success" ||
       mWBTCBalance?.status !== "success" ||
-      mWETHBalance?.status !== "success") {
+      mWETHBalance?.status !== "success"
+    ) {
       return collateralAssets;
     }
 
     const tempArray = [mWBTCBalance, mWETHBalance, mUSDCBalance];
     return collateralAssets.map((col, i) => ({
       ...col,
-      balance: tempArray[i].result as bigint
+      balance: tempArray[i].result as bigint,
     }));
-
   }, [mUSDCBalance, mWBTCBalance, mWETHBalance]);
 
   // TODO: We need to get the token object in here
@@ -254,7 +266,7 @@ export default function Home() {
                   name="collateral-amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Collateral</FormLabel>
+                      <FormLabel>Collateral ($0.00)</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-2">
                           <DecimalInput {...field} />
@@ -275,7 +287,7 @@ export default function Home() {
                               <TokenSelector
                                 tokens={collateralAssetsWithBalance}
                                 onSelect={(token) => {
-                                  setCollateral({symbol: token.symbol!});
+                                  setCollateral({ symbol: token.symbol! });
                                   setCollateralTokenSelectorOpen(false);
                                 }}
                               />
@@ -291,7 +303,7 @@ export default function Home() {
                   name="mint-amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Minted</FormLabel>
+                      <FormLabel>Minted ($0.00)</FormLabel>
                       <FormControl>
                         <div className="flex items-center gap-2">
                           <DecimalInput {...field} />
@@ -312,7 +324,7 @@ export default function Home() {
                               <TokenSelector
                                 tokens={formattedAssets}
                                 onSelect={(token) => {
-                                  setMintToken({symbol: token.symbol!});
+                                  setMintToken({ symbol: token.symbol! });
                                   setMintTokenSelectorOpen(false);
                                 }}
                               />
@@ -426,23 +438,23 @@ export default function Home() {
             )}
             {(account.status === "disconnected" ||
               account.status === "connecting") && (
-                <p>
-                  Connect your wallet to see your positions. If you don&apos;t
-                  have a wallet, you can create one using MetaMask.
-                </p>
-              )}
+              <p>
+                Connect your wallet to see your positions. If you don&apos;t
+                have a wallet, you can create one using MetaMask.
+              </p>
+            )}
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-              <CardFooter>
-                <Button
-                  className="w-full"
-                  onClick={() => connect({ connector: connectors[0] })}
-                >
-                  Connect
-                </Button>
-              </CardFooter>
-            )}
+            <CardFooter>
+              <Button
+                className="w-full"
+                onClick={() => connect({ connector: connectors[0] })}
+              >
+                Connect
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       </main>
     </div>
