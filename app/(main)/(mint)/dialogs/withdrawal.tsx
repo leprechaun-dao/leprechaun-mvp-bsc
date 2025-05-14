@@ -14,14 +14,27 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
+import { yupResolver } from "@hookform/resolvers/yup";
 import { DialogProps } from "@radix-ui/react-dialog";
 import Image from "next/image";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import * as yup from "yup";
+
+const formSchema = yup.object({
+  amount: yup
+    .number()
+    .required("Amount is required")
+    .typeError("Amount must be a number"),
+});
 
 export const WithdrawalDialog = (props: DialogProps) => {
-  const form = useForm();
+  const form = useForm({
+    resolver: yupResolver(formSchema),
+  });
 
   const handleSubmit = form.handleSubmit(async (data) => {
     console.log(data);
@@ -57,42 +70,46 @@ export const WithdrawalDialog = (props: DialogProps) => {
     });
   });
 
+  useEffect(() => {
+    form.reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.open]);
+
   return (
     <Form {...form}>
-      <form onSubmit={handleSubmit}>
-        <Dialog {...props}>
-          <DialogContent>
-            <DialogTitle>Withdrawal</DialogTitle>
-            <DialogDescription>
-              Enter the amount of minted tokens that you want to withdrawal.
-            </DialogDescription>
-            <div className="text-sm">
-              <span className="font-medium">Collateral:</span> ETH
-            </div>
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Amount</FormLabel>
-                  <FormControl>
-                    <DecimalInput {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <div className="text-sm">
-              <span className="font-medium">New Liquidation Price:</span> $2.00
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button variant="secondary">Cancel</Button>
-              </DialogClose>
-              <Button type="submit">Withdrawal</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </form>
+      <Dialog {...props}>
+        <DialogContent>
+          <DialogTitle>Withdrawal</DialogTitle>
+          <DialogDescription>
+            Enter the amount of minted tokens that you want to withdrawal.
+          </DialogDescription>
+          <div className="text-sm">
+            <span className="font-medium">Collateral:</span> ETH
+          </div>
+          <FormField
+            control={form.control}
+            name="amount"
+            render={({ field, fieldState }) => (
+              <FormItem>
+                <FormLabel>Amount</FormLabel>
+                <FormControl>
+                  <DecimalInput {...field} />
+                </FormControl>
+                <FormMessage>{fieldState.error?.message}</FormMessage>
+              </FormItem>
+            )}
+          />
+          <div className="text-sm">
+            <span className="font-medium">New Liquidation Price:</span> $2.00
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="secondary">Cancel</Button>
+            </DialogClose>
+            <Button onClick={handleSubmit}>Withdrawal</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 };
