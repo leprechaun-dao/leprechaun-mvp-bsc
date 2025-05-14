@@ -278,6 +278,41 @@ export default function Home() {
     });
   });
 
+  function mintMockCollateral(e) {
+    const buttonId = e.target.id
+    const abi = constants.SyntheticAssetABI
+
+    let contractAddress
+    let amount = BigInt(10_000_000)
+
+    switch (buttonId) {
+      case "wBTC":
+        contractAddress = constants.mWBTCAddress
+        amount = amount * BigInt(10 * 10 ** 8)
+        break;
+      case "wETH":
+        contractAddress = constants.mWETHAddress
+        amount = amount * BigInt(10 * 10 ** 18)
+        break;
+      case "USDC":
+        contractAddress = constants.mUSDCAddress
+        amount = amount * BigInt(10 * 10 ** 6)
+        break;
+
+
+      default:
+        break;
+    }
+
+    writeContract({
+      abi,
+      // @ts-expect-error address is alread 0x${string}
+      address: contractAddress!,
+      functionName: "mint",
+      args: [account.address, amount]
+    })
+  }
+
   return (
     <div className="flex flex-col min-h-screen w-full">
       <DepositDialog
@@ -585,22 +620,28 @@ export default function Home() {
                 </Button>
                 <div className="grid grid-cols-3 gap-2">
                   <Button
+                    id="USDC"
                     variant="secondary"
                     disabled={account.status !== "connected"}
+                    onClick={mintMockCollateral}
                   >
-                    A
+                    mUSDC
                   </Button>
                   <Button
+                    id="wBTC"
                     variant="secondary"
                     disabled={account.status !== "connected"}
+                    onClick={mintMockCollateral}
                   >
-                    B
+                    mWBTC
                   </Button>
                   <Button
+                    id="wETH"
                     variant="secondary"
                     disabled={account.status !== "connected"}
+                    onClick={mintMockCollateral}
                   >
-                    C
+                    mWETH
                   </Button>
                 </div>
               </div>
@@ -674,23 +715,23 @@ export default function Home() {
             )}
             {(account.status === "disconnected" ||
               account.status === "connecting") && (
-              <p>
-                Connect your wallet to see your positions. If you don&apos;t
-                have a wallet, you can create one using MetaMask.
-              </p>
-            )}
+                <p>
+                  Connect your wallet to see your positions. If you don&apos;t
+                  have a wallet, you can create one using MetaMask.
+                </p>
+              )}
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-            <CardFooter>
-              <Button
-                className="w-full"
-                onClick={() => connect({ connector: connectors[0] })}
-              >
-                Connect
-              </Button>
-            </CardFooter>
-          )}
+              <CardFooter>
+                <Button
+                  className="w-full"
+                  onClick={() => connect({ connector: connectors[0] })}
+                >
+                  Connect
+                </Button>
+              </CardFooter>
+            )}
         </Card>
       </main>
     </div>
