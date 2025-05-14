@@ -331,7 +331,18 @@ export default function Home() {
                   }}
                   render={({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>Collateral ($0.00)</FormLabel>
+                      <FormLabel>
+                        <span>
+                          Collateral{" "}
+                          <span
+                            className={cn({
+                              hidden: !form.watch("collateral"),
+                            })}
+                          >
+                            ($0.00)
+                          </span>
+                        </span>
+                      </FormLabel>
                       <div className="flex items-end gap-2">
                         <FormControl>
                           <DecimalInput
@@ -398,7 +409,18 @@ export default function Home() {
                   }}
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel>Minted ($0.00)</FormLabel>
+                      <FormLabel>
+                        <span>
+                          Minted{" "}
+                          <span
+                            className={cn({
+                              hidden: !form.watch("mint"),
+                            })}
+                          >
+                            ($0.00)
+                          </span>
+                        </span>
+                      </FormLabel>
                       <div className="flex items-end gap-2">
                         <FormControl>
                           <DecimalInput
