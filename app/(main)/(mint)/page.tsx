@@ -46,6 +46,7 @@ import * as constants from "@/utils/constants";
 import { cn } from "@/utils/css";
 import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { readContract } from "@wagmi/core";
+import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
 import {
   BanknoteArrowDown,
   BanknoteArrowUp,
@@ -58,9 +59,8 @@ import {
   VaultIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { ReactNode, useMemo, useState, useEffect } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import useDebouncedCallback from 'beautiful-react-hooks/useDebouncedCallback';
 import { toast } from "sonner";
 import {
   useAccount,
@@ -192,7 +192,14 @@ export default function Home() {
       enabled: !!account.address,
     },
   });
-  const [mUSDCBalance, mWETHBalance, mWBTCBalance, mUSDCAllowance, mWETHAllowance, mWBTCAllowance] = data || [];
+  const [
+    mUSDCBalance,
+    mWETHBalance,
+    mWBTCBalance,
+    mUSDCAllowance,
+    mWETHAllowance,
+    mWBTCAllowance,
+  ] = data || [];
 
   const formattedAssets = useMemo(() => {
     if (
@@ -250,8 +257,8 @@ export default function Home() {
         setTxHash(data);
       },
       onError(error) {
-        console.error('❌ Error en la tx:', error);
-        toast.error('Transaction failed! Please try again')
+        console.error("❌ Error en la tx:", error);
+        toast.error("Transaction failed! Please try again");
       },
     },
   });
@@ -274,8 +281,8 @@ export default function Home() {
       });
     }
 
-    if (status === 'success') {
-      console.log('✅ Tx confirmed:', receipt);
+    if (status === "success") {
+      console.log("✅ Tx confirmed:", receipt);
       // TODO handle approve and mint notifications
       toast("Transaction confirmed.", {
         action: {
@@ -296,18 +303,25 @@ export default function Home() {
         },
       });
 
-      setTxHash(null)
-      // TODO if the tx is an approval tx, make allowance the same value as the collateralAmount 
+      setTxHash(null);
+      // TODO if the tx is an approval tx, make allowance the same value as the collateralAmount
     }
   }, [status, receipt, txHash]);
 
-  const collateralWatched = form.watch('collateral');
-  const collateralAmountWatched = form.watch('collateralAmount');
+  const collateralWatched = form.watch("collateral");
+  const collateralAmountWatched = form.watch("collateralAmount");
   const cleanCollateralAmount = useMemo(() => {
-    if (!collateralWatched || collateralAmountWatched == null || collateralAmountWatched === '') return null;
+    if (
+      !collateralWatched ||
+      collateralAmountWatched == null ||
+      collateralAmountWatched === ""
+    )
+      return null;
 
     const decimals = collateralWatched.decimals;
-    const value = BigInt(Math.floor(Number(collateralAmountWatched) * 10 ** decimals));
+    const value = BigInt(
+      Math.floor(Number(collateralAmountWatched) * 10 ** decimals),
+    );
 
     return value;
   }, [collateralWatched, collateralAmountWatched]);
@@ -315,41 +329,37 @@ export default function Home() {
   const allowance = useMemo<bigint | null>(() => {
     if (!collateralWatched) return null;
 
-    let _allowance
+    let _allowance;
 
     switch (collateralWatched.symbol) {
       case "USDC":
-        _allowance = mUSDCAllowance
+        _allowance = mUSDCAllowance;
         break;
       case "wETH":
-        _allowance = mWETHAllowance
+        _allowance = mWETHAllowance;
         break;
       case "cbBTC":
-        _allowance = mWBTCAllowance
+        _allowance = mWBTCAllowance;
         break;
 
       default:
         break;
     }
 
-    return (_allowance!.result as bigint);
+    return _allowance!.result as bigint;
   }, [collateralWatched, mUSDCAllowance, mWBTCAllowance, mWETHAllowance]);
-
 
   const handleSubmitMint = form.handleSubmit(async (data) => {
     console.log(data);
 
     if (allowance! < cleanCollateralAmount!) {
-      const abi = constants.ERC20ABI
+      const abi = constants.ERC20ABI;
       // approveTokens
       writeContract({
         abi,
         address: data.collateral.tokenAddress,
         functionName: "approve",
-        args: [
-          positionManagerAddress,
-          cleanCollateralAmount
-        ],
+        args: [positionManagerAddress, cleanCollateralAmount],
       });
     } else {
       const abi = constants.PositionManagerABI;
@@ -373,26 +383,25 @@ export default function Home() {
 
   // @ts-expect-error types dont matter here
   function mintMockCollateral(e) {
-    const buttonId = e.target.id
-    const abi = constants.SyntheticAssetABI
+    const buttonId = e.target.id;
+    const abi = constants.SyntheticAssetABI;
 
-    let contractAddress
-    let amount = BigInt(10_000_000)
+    let contractAddress;
+    let amount = BigInt(10_000_000);
 
     switch (buttonId) {
       case "wBTC":
-        contractAddress = constants.mWBTCAddress
-        amount = amount * BigInt(10 * 10 ** 8)
+        contractAddress = constants.mWBTCAddress;
+        amount = amount * BigInt(10 * 10 ** 8);
         break;
       case "wETH":
-        contractAddress = constants.mWETHAddress
-        amount = amount * BigInt(10 * 10 ** 18)
+        contractAddress = constants.mWETHAddress;
+        amount = amount * BigInt(10 * 10 ** 18);
         break;
       case "USDC":
-        contractAddress = constants.mUSDCAddress
-        amount = amount * BigInt(10 * 10 ** 6)
+        contractAddress = constants.mUSDCAddress;
+        amount = amount * BigInt(10 * 10 ** 6);
         break;
-
 
       default:
         break;
@@ -403,59 +412,54 @@ export default function Home() {
       // @ts-expect-error address is alread 0x${string}
       address: contractAddress!,
       functionName: "mint",
-      args: [account.address, amount]
-    })
+      args: [account.address, amount],
+    });
   }
 
-  const [collateralValue, setCollateralValue] = useState<bigint | null>(null)
+  const [collateralValue, setCollateralValue] = useState<bigint | null>(null);
 
-  const debounced = useDebouncedCallback((e) => {
-    const abi = constants.LeprechaunLensABI;
-    const address = constants.LENSAddress;
+  const handleCollateralAmountChange = useDebouncedCallback(
+    (value: number) => {
+      const abi = constants.LeprechaunLensABI;
+      const address = constants.LENSAddress;
 
-    const mint = form.getValues().mint;
-    const collateral = form.getValues().collateral;
+      const mint = form.getValues().mint;
+      const collateral = form.getValues().collateral;
 
-    if (!mint || !collateral) return;
+      if (!mint || !collateral) return;
 
-    const index =
-      collateralAssetsWithBalance.findIndex(
-        (collateralAsset) =>
-          collateralAsset.symbol ===
-          collateral?.symbol,
+      const index = collateralAssetsWithBalance.findIndex(
+        (collateralAsset) => collateralAsset.symbol === collateral?.symbol,
       );
-    const asset = collateralAssetsWithBalance[index];
-    const inputAmount = BigInt(
-      Math.floor(Number(e) * 10 ** asset.decimals!),
-    );
+      const asset = collateralAssetsWithBalance[index];
+      const inputAmount = BigInt(
+        Math.floor(Number(value) * 10 ** asset.decimals!),
+      );
 
-    readContract(wagmiConfig, {
-      abi,
-      address: address,
-      functionName: "getMintableAmount",
-      args: [
-        mint.tokenAddress,
-        collateral.tokenAddress,
-        inputAmount,
-      ],
-    }).then((res) => {
-      console.log(res)
-      const result = res as bigint[];
-      // we assuming the decimals here
-      const newAmount = Number(result[0]) / 10 ** 18;
-      form.setValue("mintAmount", newAmount, {
-        shouldValidate: true,
+      readContract(wagmiConfig, {
+        abi,
+        address: address,
+        functionName: "getMintableAmount",
+        args: [mint.tokenAddress, collateral.tokenAddress, inputAmount],
+      }).then((res) => {
+        console.log(res);
+        const result = res as bigint[];
+        // we assuming the decimals here
+        const newAmount = Number(result[0]) / 10 ** 18;
+        form.setValue("mintAmount", newAmount, {
+          shouldValidate: true,
+        });
+        // console.log(result[0], newAmount)
+        setCollateralValue(result[1]);
+
+        form.setValue("mintAmount", Number(newAmount), {
+          shouldValidate: true,
+        });
       });
-      // console.log(result[0], newAmount)
-      setCollateralValue(result[1])
-
-      form.setValue("mintAmount", Number(newAmount), {
-        shouldValidate: true,
-      });
-    });
-
-
-  }, [], 800)
+    },
+    [],
+    800,
+  );
 
   return (
     <div className="flex flex-col min-h-screen w-full">
@@ -535,9 +539,12 @@ export default function Home() {
                               hidden: !form.watch("collateral"),
                             })}
                           >
-                            ($0.00) {" "}
-                            {(Number(collateralValue) / 10 ** 18).toLocaleString(undefined, {
-                              maximumFractionDigits: 2
+                            ($0.00){" "}
+                            {(
+                              Number(collateralValue) /
+                              10 ** 18
+                            ).toLocaleString(undefined, {
+                              maximumFractionDigits: 2,
                             })}
                           </span>
                         </span>
@@ -550,7 +557,7 @@ export default function Home() {
                             disabled={!form.watch("collateral")}
                             onChange={(e) => {
                               field.onChange(e);
-                              debounced(e)
+                              handleCollateralAmountChange(e);
                             }}
                           />
                         </FormControl>
@@ -723,7 +730,12 @@ export default function Home() {
                   className="mt-5"
                   onClick={handleSubmitMint}
                 >
-                  {collateralWatched && allowance && cleanCollateralAmount && (allowance >= cleanCollateralAmount) ? "Mint" : "Approve"}
+                  {collateralWatched &&
+                  allowance &&
+                  cleanCollateralAmount &&
+                  allowance >= cleanCollateralAmount
+                    ? "Mint"
+                    : "Approve"}
                 </Button>
                 <div className="grid grid-cols-3 gap-2">
                   <Button
@@ -822,23 +834,23 @@ export default function Home() {
             )}
             {(account.status === "disconnected" ||
               account.status === "connecting") && (
-                <p>
-                  Connect your wallet to see your positions. If you don&apos;t
-                  have a wallet, you can create one using MetaMask.
-                </p>
-              )}
+              <p>
+                Connect your wallet to see your positions. If you don&apos;t
+                have a wallet, you can create one using MetaMask.
+              </p>
+            )}
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-              <CardFooter>
-                <Button
-                  className="w-full"
-                  onClick={() => connect({ connector: connectors[0] })}
-                >
-                  Connect
-                </Button>
-              </CardFooter>
-            )}
+            <CardFooter>
+              <Button
+                className="w-full"
+                onClick={() => connect({ connector: connectors[0] })}
+              >
+                Connect
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       </main>
     </div>
