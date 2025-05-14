@@ -58,7 +58,7 @@ import {
   VaultIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useMemo, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useDebounceCallback } from 'usehooks-ts'
 import { toast } from "sonner";
@@ -67,6 +67,7 @@ import {
   useConnect,
   useReadContract,
   useReadContracts,
+  useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
 import { ClosePositionDialog } from "./dialogs/close-position";
@@ -147,6 +148,7 @@ export default function Home() {
   const form = useForm();
   const { connect, connectors } = useConnect();
   const account = useAccount();
+  const positionManagerAddress = constants.PositionManagerAddress;
 
   const { data: syntheticAssets } = useReadContract({
     ...lensContract,
@@ -170,12 +172,27 @@ export default function Home() {
         functionName: "balanceOf",
         args: [account.address],
       },
+      {
+        ...mUSDCContract,
+        functionName: "allowance",
+        args: [account.address, positionManagerAddress],
+      },
+      {
+        ...mWETHContract,
+        functionName: "allowance",
+        args: [account.address, positionManagerAddress],
+      },
+      {
+        ...mWBTCContract,
+        functionName: "allowance",
+        args: [account.address, positionManagerAddress],
+      },
     ],
     query: {
       enabled: !!account.address,
     },
   });
-  const [mUSDCBalance, mWETHBalance, mWBTCBalance] = data || [];
+  const [mUSDCBalance, mWETHBalance, mWBTCBalance, mUSDCAllowance, mWETHAllowance, mWBTCAllowance] = data || [];
 
   const formattedAssets = useMemo(() => {
     if (
@@ -226,53 +243,132 @@ export default function Home() {
   const [openDialog, setOpenDialog] = useState<
     "deposit" | "withdrawal" | "close-position" | null
   >(null);
-  const { writeContract } = useWriteContract();
+  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
+  const { writeContract } = useWriteContract({
+    mutation: {
+      onSuccess(data) {
+        setTxHash(data);
+      },
+      onError(error) {
+        console.error('❌ Error en la tx:', error);
+        toast.error('Transaction failed! Please try again')
+      },
+    },
+  });
+  const { data: receipt, status } = useWaitForTransactionReceipt({
+    // @ts-expect-error address is alread 0x${string}
+    hash: txHash,
+    confirmations: 4,
+    enabled: !!txHash,
+  });
+
+  useEffect(() => {
+    if (txHash && status === "pending") {
+      toast("Transaction sent.", {
+        action: {
+          label: "View on Etherscan",
+          onClick: () => {
+            window.open(`https://etherscan.io/tx/${txHash}`, "_blank");
+          },
+        },
+      });
+    }
+
+    if (status === 'success') {
+      console.log('✅ Tx confirmed:', receipt);
+      // TODO handle approve and mint notifications
+      toast("Transaction confirmed.", {
+        action: {
+          label: (
+            <div className="flex gap-2 items-center">
+              <Image
+                src="/uniswap.svg"
+                alt="Uniswap Logo"
+                width={24}
+                height={24}
+              />
+              Pool on Uniswap
+            </div>
+          ),
+          onClick: () => {
+            window.open(`https://etherscan.io/tx/${txHash}`, "_blank");
+          },
+        },
+      });
+
+      setTxHash(null)
+      // TODO if the tx is an approval tx, make allowance the same value as the collateralAmount 
+    }
+  }, [status, receipt, txHash]);
+
+  const collateralWatched = form.watch('collateral');
+  const collateralAmountWatched = form.watch('collateralAmount');
+  const cleanCollateralAmount = useMemo(() => {
+    if (!collateralWatched || collateralAmountWatched == null || collateralAmountWatched === '') return null;
+
+    const decimals = collateralWatched.decimals;
+    const value = BigInt(Math.floor(Number(collateralAmountWatched) * 10 ** decimals));
+
+    return value;
+  }, [collateralWatched, collateralAmountWatched]);
+
+  const allowance = useMemo<bigint | null>(() => {
+    if (!collateralWatched) return null;
+
+    let _allowance
+
+    switch (collateralWatched.symbol) {
+      case "USDC":
+        _allowance = mUSDCAllowance
+        break;
+      case "wETH":
+        _allowance = mWETHAllowance
+        break;
+      case "cbBTC":
+        _allowance = mWBTCAllowance
+        break;
+
+      default:
+        break;
+    }
+
+    return (_allowance!.result as bigint);
+  }, [collateralWatched, mUSDCAllowance, mWBTCAllowance, mWETHAllowance]);
+
 
   const handleSubmitMint = form.handleSubmit(async (data) => {
-    const abi = constants.PositionManagerABI;
-    const address = constants.PositionManagerAddress;
+    console.log(data);
 
-    // createPosition
-    writeContract({
-      abi,
-      address: address,
-      functionName: "createPosition",
-      args: [
-        data.mint.tokenAddress,
-        data.collateral.tokenAddress,
-        BigInt(
-          Math.floor(data.collateralAmount * 10 ** data.collateral.decimals),
-        ),
-        BigInt(Math.floor(data.mintAmount * 10 ** 18)),
-      ],
-    });
-    toast("Transaction sent.", {
-      action: {
-        label: "View on Etherscan",
-        onClick: () => {
-          window.open(`https://etherscan.io/tx/${"0x1234567890"}`, "_blank");
-        },
-      },
-    });
-    await new Promise((r) => setTimeout(r, 1000));
-    toast("Transaction confirmed.", {
-      action: {
-        label: (
-          <div className="flex gap-2 items-center">
-            <Image
-              src="/uniswap.svg"
-              alt="Uniswap Logo"
-              width={24}
-              height={24}
-            />
-            Pool on Uniswap
-          </div>
-        ),
-        onClick: () => {
-          window.open(`https://etherscan.io/tx/${"0x1234567890"}`, "_blank");
-        },
-      },
-    });
+    if (allowance! < cleanCollateralAmount!) {
+      const abi = constants.ERC20ABI
+      // approveTokens
+      writeContract({
+        abi,
+        address: data.collateral.tokenAddress,
+        functionName: "approve",
+        args: [
+          positionManagerAddress,
+          cleanCollateralAmount
+        ],
+      });
+    } else {
+      const abi = constants.PositionManagerABI;
+
+      // createPosition
+      writeContract({
+        abi,
+        address: positionManagerAddress,
+        functionName: "createPosition",
+        args: [
+          data.mint.tokenAddress,
+          data.collateral.tokenAddress,
+          BigInt(
+            Math.floor(data.collateralAmount * 10 ** data.collateral.decimals),
+          ),
+          BigInt(Math.floor(data.mintAmount * 10 ** 18)),
+        ],
+      });
+    }
   });
 
   function mintMockCollateral(e) {
@@ -358,7 +454,7 @@ export default function Home() {
     });
   }
 
-  const debounced = useDebounceCallback(handleCollateralChange, 500)
+  const debounced = useDebounceCallback(handleCollateralChange, 800)
 
   return (
     <div className="flex flex-col min-h-screen w-full">
@@ -438,7 +534,7 @@ export default function Home() {
                               hidden: !form.watch("collateral"),
                             })}
                           >
-                            ($0.00)
+                            ($0.00) {" "}
                             {(Number(collateralValue) / 10 ** 18).toLocaleString(undefined, {
                               maximumFractionDigits: 2
                             })}
@@ -626,7 +722,7 @@ export default function Home() {
                   className="mt-5"
                   onClick={handleSubmitMint}
                 >
-                  Mint
+                  {collateralWatched && allowance && cleanCollateralAmount && (allowance >= cleanCollateralAmount) ? "Mint" : "Approve"}
                 </Button>
                 <div className="grid grid-cols-3 gap-2">
                   <Button
