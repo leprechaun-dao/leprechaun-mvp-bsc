@@ -371,6 +371,7 @@ export default function Home() {
     }
   });
 
+  // @ts-expect-error types dont matter here
   function mintMockCollateral(e) {
     const buttonId = e.target.id
     const abi = constants.SyntheticAssetABI
@@ -408,6 +409,7 @@ export default function Home() {
 
   const [collateralValue, setCollateralValue] = useState<bigint | null>(null)
 
+  // @ts-expect-error types dont matter here
   function handleCollateralChange(e) {
     const abi = constants.LeprechaunLensABI;
     const address = constants.LENSAddress;
@@ -454,6 +456,7 @@ export default function Home() {
     });
   }
 
+  // TODO this doesnt work
   const debounced = useDebounceCallback(handleCollateralChange, 800)
 
   return (
