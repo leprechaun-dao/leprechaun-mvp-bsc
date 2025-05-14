@@ -54,6 +54,7 @@ import {
   SwissFranc,
   VaultIcon,
 } from "lucide-react";
+import Image from "next/image";
 import { ReactNode, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -234,9 +235,33 @@ export default function Home() {
 
     // createPosition
 
-    toast("Transaction sent.");
+    toast("Transaction sent.", {
+      action: {
+        label: <div className="flex gap-2 items-center">View on Etherscan</div>,
+        onClick: () => {
+          window.open(`https://etherscan.io/tx/${"0x1234567890"}`, "_blank");
+        },
+      },
+    });
     await new Promise((r) => setTimeout(r, 1000));
-    toast("Transaction confirmed.");
+    toast("Transaction confirmed.", {
+      action: {
+        label: (
+          <div className="flex gap-2 items-center">
+            <Image
+              src="/uniswap.svg"
+              alt="Uniswap Logo"
+              width={24}
+              height={24}
+            />
+            Pool on Uniswap
+          </div>
+        ),
+        onClick: () => {
+          window.open(`https://etherscan.io/tx/${"0x1234567890"}`, "_blank");
+        },
+      },
+    });
   });
 
   return (
