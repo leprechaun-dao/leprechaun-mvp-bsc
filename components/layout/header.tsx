@@ -12,10 +12,6 @@ const routes = {
     href: "/trade",
     label: "Trade",
   },
-  pool: {
-    href: "/pool",
-    label: "Pool",
-  },
 };
 
 export const Header = ({
