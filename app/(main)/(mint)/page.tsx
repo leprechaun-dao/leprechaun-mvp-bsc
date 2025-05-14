@@ -199,7 +199,7 @@ export default function Home() {
     const tempArray = [mWBTCBalance, mWETHBalance, mUSDCBalance];
     return collateralAssets.map((col, i) => ({
       ...col,
-      balance: tempArray[i].result
+      balance: tempArray[i].result as bigint
     }));
 
   }, [mUSDCBalance, mWBTCBalance, mWETHBalance]);
@@ -275,7 +275,7 @@ export default function Home() {
                               <TokenSelector
                                 tokens={collateralAssetsWithBalance}
                                 onSelect={(token) => {
-                                  setCollateral(token);
+                                  setCollateral({symbol: token.symbol!});
                                   setCollateralTokenSelectorOpen(false);
                                 }}
                               />
@@ -312,7 +312,7 @@ export default function Home() {
                               <TokenSelector
                                 tokens={formattedAssets}
                                 onSelect={(token) => {
-                                  setMintToken(token);
+                                  setMintToken({symbol: token.symbol!});
                                   setMintTokenSelectorOpen(false);
                                 }}
                               />
