@@ -284,7 +284,7 @@ export default function Home() {
     if (status === "success") {
       console.log("✅ Tx confirmed:", receipt);
       // TODO handle approve and mint notifications
-      toast("Transaction confirmed.", {
+      toast.success("Transaction confirmed.", {
         action: {
           label: (
             <div className="flex gap-2 items-center">
@@ -350,9 +350,7 @@ export default function Home() {
   }, [collateralWatched, mUSDCAllowance, mWBTCAllowance, mWETHAllowance]);
 
   const handleSubmitMint = form.handleSubmit(async (data) => {
-    if (!allowance) return;
-
-    if (allowance < cleanCollateralAmount!) {
+    if ((allowance || 0) < cleanCollateralAmount!) {
       const abi = constants.ERC20ABI;
       // approveTokens
       await writeContractAsync({
@@ -540,13 +538,14 @@ export default function Home() {
                               hidden: !form.watch("collateral"),
                             })}
                           >
-                            ($0.00){" "}
+                            ($
                             {(
                               Number(collateralValue) /
                               10 ** 18
                             ).toLocaleString(undefined, {
                               maximumFractionDigits: 2,
                             })}
+                            )
                           </span>
                         </span>
                       </FormLabel>
