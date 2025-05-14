@@ -60,7 +60,7 @@ import {
 import Image from "next/image";
 import { ReactNode, useMemo, useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useDebounceCallback } from 'usehooks-ts'
+import useDebouncedCallback from 'beautiful-react-hooks/useDebouncedCallback';
 import { toast } from "sonner";
 import {
   useAccount,
@@ -409,8 +409,7 @@ export default function Home() {
 
   const [collateralValue, setCollateralValue] = useState<bigint | null>(null)
 
-  // @ts-expect-error types dont matter here
-  function handleCollateralChange(e) {
+  const debounced = useDebouncedCallback((e) => {
     const abi = constants.LeprechaunLensABI;
     const address = constants.LENSAddress;
 
@@ -454,10 +453,9 @@ export default function Home() {
         shouldValidate: true,
       });
     });
-  }
 
-  // TODO this doesnt work
-  const debounced = useDebounceCallback(handleCollateralChange, 800)
+
+  }, [], 800)
 
   return (
     <div className="flex flex-col min-h-screen w-full">
