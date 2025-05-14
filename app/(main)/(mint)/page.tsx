@@ -60,6 +60,7 @@ import {
 import Image from "next/image";
 import { ReactNode, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useDebounceCallback } from 'usehooks-ts'
 import { toast } from "sonner";
 import {
   useAccount,
@@ -125,10 +126,6 @@ const collateralAssets: SyntheticAssetInfo[] = [
   },
 ];
 
-// const sDOWContract = {
-//   address: constants.sDOWAddress,
-//   abi: constants.SyntheticAssetABI,
-// } as const
 const mUSDCContract = {
   address: constants.mUSDCAddress,
   abi: constants.ERC20ABI,
@@ -313,6 +310,56 @@ export default function Home() {
     })
   }
 
+  const [collateralValue, setCollateralValue] = useState<bigint | null>(null)
+
+  function handleCollateralChange(e) {
+    const abi = constants.LeprechaunLensABI;
+    const address = constants.LENSAddress;
+
+    const mint = form.getValues().mint;
+    const collateral = form.getValues().collateral;
+
+    if (!mint || !collateral) return;
+
+    const index =
+      collateralAssetsWithBalance.findIndex(
+        (collateralAsset) =>
+          collateralAsset.symbol ===
+          collateral?.symbol,
+      );
+    const asset = collateralAssetsWithBalance[index];
+    const inputAmount = BigInt(
+      Math.floor(Number(e) * 10 ** asset.decimals!),
+    );
+
+    readContract(wagmiConfig, {
+      abi,
+      address: address,
+      functionName: "getMintableAmount",
+      args: [
+        mint.tokenAddress,
+        collateral.tokenAddress,
+        inputAmount,
+      ],
+    }).then((res) => {
+      console.log(res)
+      const result = res as bigint[];
+      // we assuming the decimals here
+      const newAmount = Number(result[0]) / 10 ** 18;
+      form.setValue("mintAmount", newAmount, {
+        shouldValidate: true,
+      });
+      // console.log(result[0], newAmount)
+      setCollateralValue(result[1])
+
+      form.setValue("mintAmount", Number(newAmount), {
+        shouldValidate: true,
+      });
+    });
+  }
+
+  const debounced = useDebounceCallback(handleCollateralChange, 500)
+
   return (
     <div className="flex flex-col min-h-screen w-full">
       <DepositDialog
@@ -392,6 +439,9 @@ export default function Home() {
                             })}
                           >
                             ($0.00)
+                            {(Number(collateralValue) / 10 ** 18).toLocaleString(undefined, {
+                              maximumFractionDigits: 2
+                            })}
                           </span>
                         </span>
                       </FormLabel>
@@ -403,47 +453,7 @@ export default function Home() {
                             disabled={!form.watch("collateral")}
                             onChange={(e) => {
                               field.onChange(e);
-                              // const newValue = e;
-                              const mint = form.getValues().mint;
-                              const collateral = form.getValues().collateral;
-                              const abi = constants.LeprechaunLensABI;
-                              const address = constants.LENSAddress;
-
-                              const index =
-                                collateralAssetsWithBalance.findIndex(
-                                  (collateralAsset) =>
-                                    collateralAsset.symbol ===
-                                    collateral?.symbol,
-                                );
-                              const asset = collateralAssetsWithBalance[index];
-                              const inputAmount = BigInt(
-                                Math.floor(Number(e) * 10 ** asset.decimals!),
-                              );
-
-                              if (!mint || !collateral) return;
-
-                              readContract(wagmiConfig, {
-                                abi,
-                                address: address,
-                                functionName: "getMintableAmount",
-                                args: [
-                                  mint.tokenAddress,
-                                  collateral.tokenAddress,
-                                  inputAmount,
-                                ],
-                              }).then((res) => {
-                                const result = res as bigint[];
-                                // we assuming the decimals here
-                                const newAmount = Number(result[0]) / 10 ** 18;
-                                form.setValue("mintAmount", newAmount, {
-                                  shouldValidate: true,
-                                });
-                                // console.log(result[0], newAmount)
-
-                                form.setValue("mintAmount", Number(newAmount), {
-                                  shouldValidate: true,
-                                });
-                              });
+                              debounced(e)
                             }}
                           />
                         </FormControl>
