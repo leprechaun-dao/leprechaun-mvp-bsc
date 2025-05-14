@@ -237,7 +237,7 @@ export default function Home() {
 
     toast("Transaction sent.", {
       action: {
-        label: <div className="flex gap-2 items-center">View on Etherscan</div>,
+        label: "View on Etherscan",
         onClick: () => {
           window.open(`https://etherscan.io/tx/${"0x1234567890"}`, "_blank");
         },
