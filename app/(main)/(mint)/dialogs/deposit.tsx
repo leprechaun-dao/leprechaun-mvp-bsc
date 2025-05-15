@@ -19,7 +19,7 @@ import {
 import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { DialogProps } from "@radix-ui/react-dialog";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { readContract, writeContract } from "@wagmi/core";
 import * as constants from "@/utils/constants";
@@ -27,8 +27,6 @@ import { parseBigInt } from "@/utils/web3";
 import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
 import { wagmiConfig } from "@/app/wagmiConfig";
 import { toast } from "sonner";
-import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
 
 export interface PositionDialogProps extends DialogProps {
   positionToCheck: PositionDetails | undefined;
@@ -37,21 +35,42 @@ export interface PositionDialogProps extends DialogProps {
   onSuccess?: () => void;
 }
 
-const formSchema = yup.object({
-  amount: yup
-    .number()
-    .required("Amount is required")
-    .positive("Amount must be positive")
-    .typeError("Amount must be a number"),
-});
-
 export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
-  const form = useForm({
-    resolver: yupResolver(formSchema),
-  });
+  const form = useForm();
+
+  const [loading, setLoading] = useState(false);
+
   const [collateralValue, setCollateralValue] = useState<bigint | null>(null);
   const [newRatio, setNewRatio] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const ratioAvaliation = useMemo(() => {
+    if (!newRatio) return null
+    let textColor
+    let text
+
+    if (newRatio < 150) {
+      textColor = "text-red-500"
+      text = "⚠️ Danger zone"
+    } else if (newRatio > 180) {
+      textColor = "text-green-500"
+    } else {
+      textColor = "text-yellow-500"
+    }
+    if (newRatio < 180) {
+      text = "⚠️ Close to liquidation threshold"
+    } else if (newRatio > 250) {
+      text = "✅ Very safe position"
+    } else {
+      text = "✅ Safe position"
+    }
+
+    return (
+    <div className={`text-xs ${textColor}`}>
+      {text}
+    </div>
+    )
+  }, [newRatio])
 
   const handleSubmit = form.handleSubmit(async (data) => {
     if (!props.positionToCheck || !props.collateral) return;
@@ -130,14 +149,28 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
     }
   });
 
-  useEffect(() => {
-    form.reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.open]);
+  const collateralAmountWatched = form.watch("collateralAmount") as number;
 
-  const handleCollateralAmountChange = useDebouncedCallback(
-    async (value: number) => {
-      if (!props.positionToCheck || !props.collateral || value <= 0) {
+  useEffect(() => {
+    if (!props.open) {
+      form.reset();
+      setCollateralValue(null);
+      setNewRatio(null);
+    }
+console.log(collateralAmountWatched)
+    if ( collateralAmountWatched ) {
+      setLoading(true);
+      handleUpdateRatio(collateralAmountWatched);
+    } else {
+      setNewRatio(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.open, collateralAmountWatched]);
+
+
+  const handleUpdateRatio = useDebouncedCallback(
+    async (collateralAmount) => {
+      if (!props.positionToCheck || !props.collateral) {
         setCollateralValue(null);
         setNewRatio(null);
         return;
@@ -145,7 +178,7 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
 
       try {
         const inputAmount = BigInt(
-          Math.floor(Number(value) * 10 ** (props.collateral.decimals as number)),
+          Math.floor(Number(collateralAmount) * 10 ** (props.collateral.decimals as number)),
         );
 
         // Calculate USD value of added collateral
@@ -164,6 +197,7 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
           const newRatio = Number(totalCollateralValue * BigInt(10000) / (props.positionToCheck.debtUsdValue as bigint)) / 100;
           setNewRatio(newRatio);
         }
+        setLoading(false)
       } catch (error) {
         console.error("Error calculating values:", error);
       }
@@ -194,44 +228,68 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
           </div>
           <FormField
             control={form.control}
-            name="amount"
+            name="collateralAmount"
+            rules={{
+              required: "Amount is required",
+              validate: {
+                isNumber: (value) => {
+                  return (
+                    typeof value === "number" || "Amount must be a number"
+                  );
+                },
+                isPositive: (value) => {
+                  return value > 0 || "Amount must be greater than 0";
+                },
+                withinBalance: (value) => {
+                  const inputAmount = BigInt(
+                    Math.floor(
+                      Number(value) * 10 ** (props.collateral?.decimals as number),
+                    ),
+                  );
+                  const assetBalance = props.collateral?.balance as bigint;
+
+                  return (
+                    inputAmount <= assetBalance ||
+                    "Amount must be within balance"
+                  );
+                },
+              },
+            }}
             render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel>Amount {collateralValue ?
-                  `(~$${parseBigInt(collateralValue, 18, 2)})` : ''}</FormLabel>
+                <FormLabel className="flex gap-[24%]">
+                  <span>
+                    Amount {collateralValue ?
+                    `(~$${parseBigInt(collateralValue, 18, 2)})` : ''}
+                  </span>
+
+                  <span className="flex gap-[12px]">
+                    New Ratio: {loading && (<Loader2 className="animate-spin size-3" />)}
+                    {" "}{newRatio && <>{newRatio.toFixed(2)}%</>}
+                  </span>
+                </FormLabel>
                 <FormControl>
                   <DecimalInput
                     {...field}
-                    onChange={(e) => {
-                      field.onChange(e);
-                      handleCollateralAmountChange(e);
-                    }}
                   />
                 </FormControl>
                 <FormMessage>{fieldState.error?.message}</FormMessage>
               </FormItem>
             )}
           />
-          {newRatio !== null && (
-            <div className="text-sm mt-2">
-              <span className="font-medium">New Ratio:</span> {newRatio.toFixed(2)}%
-              <div className={`text-xs ${newRatio < 150 ? 'text-red-500' : newRatio > 200 ? 'text-green-500' : 'text-yellow-500'}`}>
-                {newRatio < 150 ? '⚠️ Danger zone' :
-                 newRatio < 180 ? '⚠️ Close to liquidation threshold' :
-                 newRatio > 250 ? '✅ Very safe position' :
-                 '✅ Safe position'}
-              </div>
-            </div>
-          )}
+          <div className={`text-center text-xs ${newRatio ? "":"text-gray-500"}`}>
+            <span className="flex justify-center">
+              Position avaliation: {newRatio && ratioAvaliation}
+            </span>
+          </div>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <Loader2 className="size-4 mx-4 animate-spin" />
-              ) : (
-                "Deposit"
+            <Button onClick={handleSubmit} disabled={isSubmitting || loading}>
+              Deposit
+              {loading || isSubmitting && (
+                <Loader2 className="animate-spin size-3" />
               )}
             </Button>
           </DialogFooter>

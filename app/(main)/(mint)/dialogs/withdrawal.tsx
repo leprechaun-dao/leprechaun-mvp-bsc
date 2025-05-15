@@ -38,11 +38,7 @@ export interface PositionDialogProps extends DialogProps {
 }
 
 export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
-  const form = useForm({
-    defaultValues: {
-      amount: "" as unknown as number
-    }
-  });
+  const form = useForm();
   const [maxWithdrawable, setMaxWithdrawable] = useState<bigint | null>(null);
   const [newRatio, setNewRatio] = useState<number | null>(null);
   const [feeAmount, setFeeAmount] = useState<bigint | null>(null);

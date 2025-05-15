@@ -521,9 +521,9 @@ export default function Home() {
       mint,
       collateralRatio,
     }: {
-      mint: SyntheticAssetInfo;
       collateral: SyntheticAssetInfo;
       collateralAmount: number;
+      mint: SyntheticAssetInfo;
       collateralRatio: number;
     }) => {
       try {
@@ -580,7 +580,7 @@ export default function Home() {
         return null;
     }
   };
-  
+
   useEffect(() => {
     if (
       collateralWatched &&
