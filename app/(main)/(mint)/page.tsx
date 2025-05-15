@@ -455,6 +455,7 @@ export default function Home() {
         functionName: "approve",
         args: [positionManagerAddress, cleanCollateralAmount],
       });
+      console.log("approved");
     } else {
       const abi = constants.PositionManagerABI;
 
@@ -931,7 +932,6 @@ export default function Home() {
                     <TableHead>Asset</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Collateral</TableHead>
-                    <TableHead>Current Price</TableHead>
                     <TableHead>Current Ratio</TableHead>
                     <TableHead>Liq. Ratio</TableHead>
                   </TableRow>
@@ -963,21 +963,17 @@ export default function Home() {
                             {position.collateralSymbol}{" "}
                           </TableCell>
                           <TableCell>
-                            $
-                            {parseBigInt(
-                              position.mintedCurrentUsdValue as bigint,
-                              18,
-                              2,
-                            )}
+                            {parseBigInt(position.currentRatio as bigint, 2, 2)}
+                            %
                           </TableCell>
                           <TableCell>
-                            $
-                            {calculateLiquidationPrice(position).toLocaleString(
-                              undefined,
-                              { currency: "USD", maximumFractionDigits: 2 },
+                            {parseBigInt(
+                              position.requiredRatio as bigint,
+                              2,
+                              2,
                             )}
+                            %
                           </TableCell>
-                          <TableCell>%RATIO</TableCell>
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
