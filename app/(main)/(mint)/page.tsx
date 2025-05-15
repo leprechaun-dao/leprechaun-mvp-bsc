@@ -569,7 +569,19 @@ export default function Home() {
   );
 
   const [loadingMintedAmount, setLoadingMintedAmount] = useState(false);
-
+  const getAllowanceForSymbol = (symbol: string): bigint | null => {
+    switch (symbol) {
+      case "mUSDC":
+        return mUSDCAllowance?.result as bigint;
+      case "mWETH":
+        return mWETHAllowance?.result as bigint;
+      case "mWBTC":
+        return mWBTCAllowance?.result as bigint;
+      default:
+        return null;
+    }
+  };
+  
   useEffect(() => {
     if (
       collateralWatched &&
@@ -613,24 +625,22 @@ export default function Home() {
     <div className="flex flex-col min-h-screen w-full">
       {/* @ts-expect-error we dont care about these issues rn */}
       <DepositDialog
-        {...selectedPosition}
-        open={openDialog === "deposit"}
-        onOpenChange={(v) =>
-          v ? setOpenDialog("deposit") : setOpenDialog(null)
-        }
-      />
-      <WithdrawalDialog
-        open={openDialog === "withdrawal"}
-        onOpenChange={(v) =>
-          v ? setOpenDialog("withdrawal") : setOpenDialog(null)
-        }
-      />
-      <ClosePositionDialog
-        open={openDialog === "close-position"}
-        onOpenChange={(v) =>
-          v ? setOpenDialog("close-position") : setOpenDialog(null)
-        }
-      />
+  {...selectedPosition}
+  open={openDialog === "deposit"}
+  onOpenChange={(v) => v ? setOpenDialog("deposit") : setOpenDialog(null)}
+/>
+
+<WithdrawalDialog
+  {...selectedPosition}
+  open={openDialog === "withdrawal"}
+  onOpenChange={(v) => v ? setOpenDialog("withdrawal") : setOpenDialog(null)}
+/>
+
+<ClosePositionDialog
+  {...selectedPosition}
+  open={openDialog === "close-position"}
+  onOpenChange={(v) => v ? setOpenDialog("close-position") : setOpenDialog(null)}
+/>
 
       <Header activeRoute="mint" />
       <main className="flex flex-col gap-5 flex-1 items-center justify-center mb-[20vh] px-6">
@@ -934,82 +944,107 @@ export default function Home() {
                       .filter((position) => position.isActive)
                       .map((position) => (
                         <TableRow key={position.positionId}>
-                          <TableCell>
-                            {getAssetIcon(
-                              position.syntheticSymbol,
-                              "inline-block size-4",
-                            )}
-                            {position.syntheticSymbol}
-                          </TableCell>
-                          <TableCell>
-                            {parseBigInt(position.mintedAmount, 18, 5)}
-                          </TableCell>
-                          <TableCell>
-                            {parseBigInt(
-                              position.collateralAmount,
-                              getDecimalsPerCollateralSymbol(
-                                position.collateralSymbol,
-                              ),
-                              4,
-                            )}{" "}
-                            {position.collateralSymbol}{" "}
-                          </TableCell>
-                          <TableCell>
-                            {parseBigInt(position.currentRatio as bigint, 2, 2)}
-                            %
-                          </TableCell>
-                          <TableCell>
-                            {parseBigInt(
-                              position.requiredRatio as bigint,
-                              2,
-                              2,
-                            )}
-                            %
-                          </TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="px-1">
-                                  <EllipsisVertical className="size-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedPosition({
-                                      positionToCheck: position,
-                                      collateral:
-                                        collateralAssetsWithBalance.find(
-                                          (collateralAsset) =>
-                                            collateralAsset.symbol ===
-                                            position.collateralSymbol,
-                                        ),
-                                      allowance: allowance,
-                                    });
-                                    setOpenDialog("deposit");
-                                  }}
-                                >
-                                  <BanknoteArrowUp />
-                                  Deposit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => setOpenDialog("withdrawal")}
-                                >
-                                  <BanknoteArrowDown />
-                                  Withdrawal
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    setOpenDialog("close-position")
-                                  }
-                                >
-                                  <BanknoteX />
-                                  Close Position
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
+  <TableCell>
+    {getAssetIcon(position.syntheticSymbol, "inline-block size-4")}
+    {position.syntheticSymbol}
+  </TableCell>
+  <TableCell>{parseBigInt(position.mintedAmount, 18, 5)}</TableCell>
+  <TableCell>
+    {parseBigInt(
+      position.collateralAmount,
+      getDecimalsPerCollateralSymbol(position.collateralSymbol),
+      4
+    )}{" "}
+    {position.collateralSymbol}{" "}
+  </TableCell>
+  <TableCell>
+    {parseBigInt(position.currentRatio as bigint, 2, 2)}%
+  </TableCell>
+  <TableCell>
+    {parseBigInt(position.requiredRatio as bigint, 2, 2)}%
+  </TableCell>
+  <TableCell>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="px-1">
+          <EllipsisVertical className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedPosition({
+              positionToCheck: position,
+              collateral: collateralAssetsWithBalance.find(
+                (collateralAsset) =>
+                  collateralAsset.symbol === position.collateralSymbol
+              ),
+              allowance: getAllowanceForSymbol(position.collateralSymbol),
+              onSuccess: () => {
+                // Refresh user positions
+                openPositionsContractCall.refetch();
+                // Refresh allowances and balances
+                allowanceAndBalanceContract.refetch();
+              }
+            });
+            setOpenDialog("deposit");
+          }}
+        >
+          <BanknoteArrowUp className="mr-2 size-4"/>
+          Deposit
+        </DropdownMenuItem>
+        <DropdownMenuItem
+  onClick={() => {
+    // Log the position data to confirm it exists
+    console.log("Position data being set:", position);
+    
+    // Make sure all required fields are present
+    setSelectedPosition({
+      positionToCheck: position,
+      collateral: collateralAssetsWithBalance.find(
+        (collateralAsset) =>
+          collateralAsset.symbol === position.collateralSymbol
+      ),
+      // Make sure to pass allowance here too, even if it's for withdraw
+      allowance: getAllowanceForSymbol(position.collateralSymbol),
+      onSuccess: () => {
+        // Refresh user positions
+        openPositionsContractCall.refetch();
+        // Refresh allowances and balances
+        allowanceAndBalanceContract.refetch();
+      }
+    });
+    setOpenDialog("withdrawal");
+  }}
+>
+  <BanknoteArrowDown className="mr-2 size-4"/>
+  Withdraw
+</DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => {
+            setSelectedPosition({
+              positionToCheck: position,
+              collateral: collateralAssetsWithBalance.find(
+                (collateralAsset) =>
+                  collateralAsset.symbol === position.collateralSymbol
+              ),
+              onSuccess: () => {
+                // Refresh user positions
+                openPositionsContractCall.refetch();
+                // Refresh allowances and balances
+                allowanceAndBalanceContract.refetch();
+              }
+            });
+            setOpenDialog("close-position");
+          }}
+        >
+          <BanknoteX className="mr-2 size-4"/>
+          Close Position
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  </TableCell>
+</TableRow>
                       ))
                   ) : (
                     <TableRow>

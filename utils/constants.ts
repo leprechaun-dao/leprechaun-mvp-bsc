@@ -35,3 +35,5 @@ export {
   PositionManagerABI,
   SyntheticAssetABI,
 };
+
+export const EXPLORER_URL = "https://basescan.org/"

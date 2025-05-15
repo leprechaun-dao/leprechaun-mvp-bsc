@@ -7,40 +7,167 @@ import {
   DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { DialogProps } from "@radix-ui/react-dialog";
-import { ArrowDown, ArrowUp } from "lucide-react";
-import Image from "next/image";
+import { ArrowDown, ArrowUp, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { readContract } from "@wagmi/core";
+import * as constants from "@/utils/constants";
+import { parseBigInt } from "@/utils/web3";
+import { wagmiConfig } from "@/app/wagmiConfig";
 import { toast } from "sonner";
+import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 
-export const ClosePositionDialog = (props: DialogProps) => {
+export interface PositionDialogProps extends DialogProps {
+  positionToCheck: PositionDetails | undefined;
+  collateral: SyntheticAssetInfo | undefined;
+  onSuccess?: () => void;
+}
+
+export const ClosePositionDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
+  const [feeAmount, setFeeAmount] = useState<bigint | null>(null);
+  const [netCollateral, setNetCollateral] = useState<bigint | null>(null);
+  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Use wagmi's useWriteContract hook
+  const { writeContractAsync } = useWriteContract();
+
+  // Handle transaction receipt
+  const { status } = useWaitForTransactionReceipt({
+    hash: txHash,
+    confirmations: 1,
+    enabled: !!txHash,
+  });
+
+  useEffect(() => {
+    if (props.open && props.positionToCheck) {
+      console.log("Position data for close:", props.positionToCheck);
+      calculateClosePositionDetails();
+    }
+  }, [props.open, props.positionToCheck]);
+
+  // Handle transaction status changes
+  useEffect(() => {
+    if (txHash && status === "pending") {
+      toast("Transaction sent.", {
+        action: {
+          label: "View on Explorer",
+          onClick: () => window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
+        },
+      });
+    }
+
+    if (status === "success") {
+      toast.success("Position closed successfully!", {
+        description: `Returned ${netCollateral ? parseBigInt(netCollateral, props.collateral?.decimals || 0, 4) : '0'} ${props.positionToCheck?.collateralSymbol} to your wallet`,
+        action: {
+          label: "View on Explorer",
+          onClick: () => window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
+        },
+      });
+      
+      // Call success callback to refresh data
+      if (onSuccess) onSuccess();
+      
+      // Close dialog
+      props.onOpenChange?.(false);
+      setTxHash(null);
+      setIsSubmitting(false);
+    }
+
+    if (status === "error") {
+      toast.error("Transaction failed", {
+        description: "Error processing transaction"
+      });
+      setIsSubmitting(false);
+      setTxHash(null);
+    }
+  }, [status, txHash, netCollateral, props, onSuccess]);
+
+  const calculateClosePositionDetails = async () => {
+    if (!props.positionToCheck || !props.collateral) {
+      console.log("Missing position or collateral data for close calculation");
+      return;
+    }
+    
+    try {
+      console.log("Calculating close position details...");
+      
+      // Get protocol fee
+      const protocolFeePercent = await readContract(wagmiConfig, {
+        abi: constants.LeprechaunFactoryABI,
+        address: constants.LeprechaunFactoryAddress,
+        functionName: "protocolFee",
+      });
+      
+      console.log("Protocol fee:", protocolFeePercent);
+      console.log("Collateral amount:", props.positionToCheck.collateralAmount);
+      
+      // Calculate fee on collateral
+      const fee = (props.positionToCheck.collateralAmount * (protocolFeePercent as bigint)) / BigInt(10000);
+      setFeeAmount(fee);
+      
+      // Calculate net collateral returned to user
+      const net = props.positionToCheck.collateralAmount - fee;
+      setNetCollateral(net);
+      
+      console.log("Fee calculated:", fee);
+      console.log("Net collateral calculated:", net);
+    } catch (error) {
+      console.error("Error calculating close position details:", error);
+    }
+  };
+
   const handleClosePosition = async () => {
-    toast("Transaction sent.", {
-      action: {
-        label: "View on Etherscan",
-        onClick: () => {
-          window.open(`https://etherscan.io/tx/${"0x1234567890"}`, "_blank");
-        },
-      },
-    });
-    await new Promise((r) => setTimeout(r, 1000));
-    toast.success("Transaction confirmed.", {
-      action: {
-        label: (
-          <div className="flex gap-2 items-center">
-            <Image
-              src="/uniswap.svg"
-              alt="Uniswap Logo"
-              width={24}
-              height={24}
-            />
-            Pool on Uniswap
-          </div>
-        ),
-        onClick: () => {
-          window.open(`https://etherscan.io/tx/${"0x1234567890"}`, "_blank");
-        },
-      },
-    });
+    if (!props.positionToCheck) {
+      console.error("Missing position data");
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      console.log("Closing position:", props.positionToCheck.positionId);
+      
+      // First, check if user has enough synthetic tokens to burn
+      const syntheticBalance = await readContract(wagmiConfig, {
+        abi: constants.ERC20ABI,
+        address: props.positionToCheck.syntheticAsset,
+        functionName: "balanceOf",
+        args: [props.positionToCheck.owner],
+      });
+      
+      console.log("Synthetic balance:", syntheticBalance);
+      console.log("Minted amount:", props.positionToCheck.mintedAmount);
+      
+      if ((syntheticBalance as bigint) < props.positionToCheck.mintedAmount) {
+        toast.error("Insufficient synthetic tokens", {
+          description: `You need ${parseBigInt(props.positionToCheck.mintedAmount, 18, 6)} ${props.positionToCheck.syntheticSymbol} to close this position`
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      console.log("Calling closePosition with:", props.positionToCheck.positionId);
+      
+      // Close position using wagmi's useWriteContractAsync
+      const hash = await writeContractAsync({
+        address: constants.PositionManagerAddress as `0x${string}`,
+        abi: constants.PositionManagerABI,
+        functionName: "closePosition",
+        args: [props.positionToCheck.positionId]
+      });
+      
+      console.log("Transaction hash:", hash);
+      setTxHash(hash);
+      
+    } catch (error) {
+      console.error("Close position error:", error);
+      toast.error("Transaction failed", {
+        description: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -48,31 +175,52 @@ export const ClosePositionDialog = (props: DialogProps) => {
       <DialogContent>
         <DialogTitle>Close Position</DialogTitle>
         <DialogDescription>
-          Are you sure you want to close your position?
+          Are you sure you want to close your position? This will burn your synthetic tokens and return your collateral.
         </DialogDescription>
 
-        <div>
+        <div className="space-y-4 my-2">
           <div className="mb-1">
-            When you close your position, the following will happen:
+            <span className="font-medium">Position ID:</span> {props.positionToCheck?.positionId.toString()}
           </div>
-          <div className="text-green">
-            <span className="font-medium ">Collateral:</span>{" "}
-            <ArrowUp className="size-3 inline center" />
-            1.45 ETH
-          </div>
-          <div className="text-red-500">
-            <span className="font-medium ">Asset:</span>{" "}
-            <ArrowDown className="size-3 inline center" />
-            0.205 ETH
+          
+          <div className="text-sm space-y-1">
+            <div className="mb-1">When you close your position, the following will happen:</div>
+            
+            <div className="flex justify-between items-center border-b border-gray-100 pb-1">
+              <span>Synthetic Asset</span>
+              <span className="text-destructive flex items-center">
+                <ArrowDown className="size-3 mr-1" />
+                {props.positionToCheck ? parseBigInt(props.positionToCheck.mintedAmount, 18, 6) : '0'} {props.positionToCheck?.syntheticSymbol}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center border-b border-gray-100 pb-1">
+              <span>Protocol Fee</span>
+              <span className="text-muted-foreground">
+                {feeAmount ? parseBigInt(feeAmount, props.collateral?.decimals || 0, 4) : '0'} {props.positionToCheck?.collateralSymbol}
+              </span>
+            </div>
+            
+            <div className="flex justify-between items-center font-medium pt-1">
+              <span>Collateral Returned</span>
+              <span className="text-green-600 flex items-center">
+                <ArrowUp className="size-3 mr-1" />
+                {netCollateral ? parseBigInt(netCollateral, props.collateral?.decimals || 0, 4) : '0'} {props.positionToCheck?.collateralSymbol}
+              </span>
+            </div>
           </div>
         </div>
 
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="default">Cancel</Button>
+            <Button variant="secondary">Cancel</Button>
           </DialogClose>
-          <Button variant="destructive" onClick={handleClosePosition}>
-            Confirm
+          <Button variant="destructive" onClick={handleClosePosition} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <Loader2 className="size-4 mx-4 animate-spin" />
+            ) : (
+              "Close Position"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
