@@ -33,6 +33,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import {
   Table,
@@ -479,11 +480,6 @@ export default function Home() {
     });
   }
 
-  const [collateralValue, setCollateralValue] = useState<bigint | null>(null);
-  const [synthAmountToBeMinted, setSynthAmountToBeMinted] = useState<
-    bigint | null
-  >(null);
-
   const handleCollateralAmountChange = useDebouncedCallback(
     async (value: number) => {
       const abi = constants.LeprechaunLensABI;
@@ -512,8 +508,6 @@ export default function Home() {
       // we assuming the decimals here
       const newAmount = Number(result[0]) / 10 ** 18;
 
-      setCollateralValue(result[1]);
-      setSynthAmountToBeMinted(result[0]);
       form.setValue("mintAmount", newAmount, {
         shouldValidate: true,
       });
@@ -616,18 +610,7 @@ export default function Home() {
                   }}
                   render={({ field }) => (
                     <FormItem className="w-full">
-                      <FormLabel>
-                        <span>
-                          Collateral{" "}
-                          <span
-                            className={cn({
-                              hidden: !form.watch("collateral"),
-                            })}
-                          >
-                            (${parseBigInt(collateralValue as bigint, 18, 2)})
-                          </span>
-                        </span>
-                      </FormLabel>
+                      <FormLabel>Collateral</FormLabel>
                       <div className="flex items-end gap-2">
                         <FormControl>
                           <DecimalInput
@@ -699,27 +682,10 @@ export default function Home() {
                   }}
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel>
-                        <span>
-                          Minted{" "}
-                          <span
-                            className={cn({
-                              hidden: !form.watch("mint"),
-                            })}
-                          >
-                            (
-                            {parseBigInt(
-                              synthAmountToBeMinted as bigint,
-                              18,
-                              2,
-                            )}{" "}
-                            ${form.getValues().mint?.symbol})
-                          </span>
-                        </span>
-                      </FormLabel>
+                      <FormLabel>Minted</FormLabel>
                       <div className="flex items-end gap-2">
                         <FormControl>
-                          <DecimalInput className="h-14" {...field} disabled />
+                          <Input className="h-14" {...field} disabled />
                         </FormControl>
                         <FormField
                           name="mint"
