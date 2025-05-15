@@ -55,6 +55,7 @@ import {
   BanknoteX,
   ChevronDown,
   EllipsisVertical,
+  Loader2,
   RussianRuble,
   SaudiRiyal,
   SwissFranc,
@@ -370,17 +371,14 @@ export default function Home() {
     openPositionsContractCall.data,
   ]);
 
-  const collateralWatched = form.watch("collateral");
-  const collateralAmountWatched = form.watch("collateralAmount");
-  const cleanCollateralAmount = useMemo(() => {
-    if (
-      !collateralWatched ||
-      collateralAmountWatched == null ||
-      collateralAmountWatched === ""
-    )
-      return null;
+  const collateralWatched = form.watch("collateral") as SyntheticAssetInfo;
+  const collateralAmountWatched = form.watch("collateralAmount") as number;
+  const mintWatched = form.watch("mint") as SyntheticAssetInfo;
 
-    const decimals = collateralWatched.decimals;
+  const cleanCollateralAmount = useMemo(() => {
+    if (!collateralWatched || collateralAmountWatched == null) return null;
+
+    const decimals = collateralWatched.decimals || 0;
     const value = BigInt(
       Math.floor(Number(collateralAmountWatched) * 10 ** decimals),
     );
@@ -480,41 +478,71 @@ export default function Home() {
     });
   }
 
-  const handleCollateralAmountChange = useDebouncedCallback(
-    async (value: number) => {
-      const abi = constants.LeprechaunLensABI;
-      const address = constants.LENSAddress;
+  const handleUpdateMintedAmount = useDebouncedCallback(
+    async ({
+      collateral,
+      collateralAmount,
+      mint,
+    }: {
+      mint: SyntheticAssetInfo;
+      collateral: SyntheticAssetInfo;
+      collateralAmount: number;
+    }) => {
+      try {
+        const abi = constants.LeprechaunLensABI;
+        const address = constants.LENSAddress;
+        const asset = collateralAssetsWithBalance.find(
+          (collateralAsset) => collateralAsset.symbol === collateral?.symbol,
+        );
 
-      const mint = form.getValues().mint;
-      const collateral = form.getValues().collateral;
+        const inputAmount = BigInt(
+          Math.floor(
+            Number(collateralAmount) * 10 ** (asset?.decimals as number),
+          ),
+        );
 
-      if (!mint || !collateral) return;
+        const res = await readContract(wagmiConfig, {
+          abi,
+          address: address,
+          functionName: "getMintableAmount",
+          args: [mint.tokenAddress, collateral.tokenAddress, inputAmount],
+        });
 
-      const asset = collateralAssetsWithBalance.find(
-        (collateralAsset) => collateralAsset.symbol === collateral?.symbol,
-      );
-      const inputAmount = BigInt(
-        Math.floor(Number(value) * 10 ** (asset?.decimals as number)),
-      );
+        const result = res as bigint[];
+        // we assuming the decimals here
+        const newAmount = Number(result[0]) / 10 ** 18;
 
-      const res = await readContract(wagmiConfig, {
-        abi,
-        address: address,
-        functionName: "getMintableAmount",
-        args: [mint.tokenAddress, collateral.tokenAddress, inputAmount],
-      });
-
-      const result = res as bigint[];
-      // we assuming the decimals here
-      const newAmount = Number(result[0]) / 10 ** 18;
-
-      form.setValue("mintAmount", newAmount, {
-        shouldValidate: true,
-      });
+        form.setValue("mintAmount", newAmount, {
+          shouldValidate: true,
+        });
+      } finally {
+        setLoadingMintedAmount(false);
+      }
     },
     [],
     800,
   );
+
+  const [loadingMintedAmount, setLoadingMintedAmount] = useState(false);
+
+  useEffect(() => {
+    if (collateralWatched && collateralAmountWatched && mintWatched) {
+      setLoadingMintedAmount(true);
+      handleUpdateMintedAmount({
+        collateral: collateralWatched,
+        collateralAmount: collateralAmountWatched,
+        mint: mintWatched,
+      });
+    } else {
+      form.setValue("mintAmount", undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    collateralWatched,
+    collateralAmountWatched,
+    mintWatched,
+    handleUpdateMintedAmount,
+  ]);
 
   const calculateLiquidationPrice = (position: PositionDetails): number => {
     const collateralUsd = Number(position.collateralUsdValue) / 1e18;
@@ -682,10 +710,25 @@ export default function Home() {
                   }}
                   render={({ field }) => (
                     <FormItem className="flex-1">
-                      <FormLabel>Minted</FormLabel>
+                      <FormLabel>
+                        Minted
+                        {loadingMintedAmount && (
+                          <Loader2 className="animate-spin size-3" />
+                        )}
+                      </FormLabel>
                       <div className="flex items-end gap-2">
                         <FormControl>
-                          <Input className="h-14" {...field} disabled />
+                          <Input
+                            className="h-14"
+                            {...field}
+                            value={(field.value || 0).toLocaleString(
+                              undefined,
+                              {
+                                minimumFractionDigits: 2,
+                              },
+                            )}
+                            disabled
+                          />
                         </FormControl>
                         <FormField
                           name="mint"
@@ -774,7 +817,9 @@ export default function Home() {
                   )}
                 />
                 <Button
-                  disabled={account.status !== "connected"}
+                  disabled={
+                    account.status !== "connected" || loadingMintedAmount
+                  }
                   className="mt-5"
                   onClick={handleSubmitMint}
                 >
