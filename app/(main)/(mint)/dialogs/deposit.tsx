@@ -16,31 +16,33 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { yupResolver } from "@hookform/resolvers/yup";
+import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { DialogProps } from "@radix-ui/react-dialog";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { readContract } from "@wagmi/core";
+import * as constants from "@/utils/constants";
+import { parseBigInt } from "@/utils/web3";
+import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
+import {wagmiConfig} from "@/app/wagmiConfig"
 import { toast } from "sonner";
-import * as yup from "yup";
 
-const formSchema = yup.object({
-  amount: yup
-    .number()
-    .required("Amount is required")
-    .typeError("Amount must be a number"),
-});
+export interface PositionDialogProps extends DialogProps {
+  positionToCheck: PositionDetails | undefined
+  collateral: SyntheticAssetInfo | undefined
+  allowance: bigint | null
+}
 
-export const DepositDialog = ({ ...props }: DialogProps) => {
-  const form = useForm({
-    resolver: yupResolver(formSchema),
-  });
+export const DepositDialog = ({ ...props }: PositionDialogProps) => {
+  const form = useForm();
+  const [collateralValue, setCollateralValue] = useState<bigint | null>(null);
+  const [synthAmountToBeMinted, setSynthAmountToBeMinted] = useState<bigint | null>(null);
 
   const handleSubmit = form.handleSubmit(async (data) => {
     console.log(data);
-
-    // Handle deposit logic here
+    // DepositCollateral
 
     toast("Transaction sent.", {
       action: {
@@ -70,13 +72,42 @@ export const DepositDialog = ({ ...props }: DialogProps) => {
       },
     });
 
-    props.onOpenChange?.(false);
+    // props.onOpenChange?.(false);
+    // setCollateralValue(null)
+    // setSynthAmountToBeMinted(null)
   });
 
   useEffect(() => {
     form.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.open]);
+
+  const handleCollateralAmountChange = useDebouncedCallback(
+    async (value: number) => {
+      const abi = constants.LeprechaunLensABI;
+      const address = constants.LENSAddress;
+
+      const inputAmount = BigInt(
+        Math.floor(Number(value) * 10 ** (props.collateral?.decimals as number)),
+      );
+
+      const res = await readContract(wagmiConfig, {
+        abi,
+        address: address,
+        functionName: "getMintableAmount",
+        args: [props.positionToCheck?.syntheticAsset, props.collateral?.tokenAddress, inputAmount],
+      });
+
+      const result = res as bigint[];
+      // we assuming the decimals here
+      // const newAmount = Number(result[0]) / 10 ** 18;
+
+      setCollateralValue(result[1]);
+      setSynthAmountToBeMinted(result[0])
+    },
+    [],
+    800,
+  );
 
   return (
     <Dialog {...props}>
@@ -87,23 +118,56 @@ export const DepositDialog = ({ ...props }: DialogProps) => {
             Enter the amount of tokens you want to deposit.
           </DialogDescription>
           <div className="text-sm">
-            <span className="font-medium">Collateral:</span> ETH
+            <span className="font-medium">Collateral:</span> {props.positionToCheck?.collateralSymbol}
           </div>
           <FormField
             control={form.control}
             name="amount"
+            rules={{
+              required: "Amount is required",
+                validate: {
+                  isNumber: (value) => {
+                    return (
+                      typeof value === "number" || "Amount must be a number"
+                    );
+                  },
+                  isPositive: (value) => {
+                    return value > 0 || "Amount must be greater than 0";
+                  },
+                  withinBalance: (value) => {
+                    const collateral = props.collateral;
+                    const inputAmount = BigInt(
+                      Math.floor(Number(value) * 10 ** (collateral?.decimals as number)),
+                    );
+                    const assetBalance = collateral?.balance;
+
+                    return (
+                      inputAmount <= assetBalance! ||
+                      "Amount must be within balance"
+                    );
+                  },
+                },
+              }}
             render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel>Amount ($0.00)</FormLabel>
+                <FormLabel>Amount (${parseBigInt(collateralValue as bigint, 17, 2)})</FormLabel>
                 <FormControl>
-                  <DecimalInput {...field} />
+                  <DecimalInput
+                    {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      handleCollateralAmountChange(e);
+                    }}
+                  />
                 </FormControl>
                 <FormMessage>{fieldState.error?.message}</FormMessage>
               </FormItem>
             )}
           />
           <div className="text-sm">
-            <span className="font-medium">New Liquidation Price:</span> $2.00
+            <span className="font-medium">New Liquidation Price:</span> $2.00 <br/>
+            <span className="font-medium">Synthetics to be minted:</span>{" "}
+            {parseBigInt(synthAmountToBeMinted as bigint, 18, 2)}{" "} ${props.positionToCheck?.syntheticSymbol}
           </div>
           <DialogFooter>
             <DialogClose asChild>

@@ -71,7 +71,7 @@ import {
   useWriteContract,
 } from "wagmi";
 import { ClosePositionDialog } from "./dialogs/close-position";
-import { DepositDialog } from "./dialogs/deposit";
+import { DepositDialog, PositionDialogProps } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
 import { parseBigInt } from "@/utils/web3";
 
@@ -105,7 +105,7 @@ const collateralAssets: SyntheticAssetInfo[] = [
   {
     tokenAddress: constants.mWBTCAddress,
     name: "Bitcoin",
-    symbol: "cbBTC",
+    symbol: "mWBTC",
     isActive: true,
     decimals: 8,
     icon: <SwissFranc />,
@@ -113,7 +113,7 @@ const collateralAssets: SyntheticAssetInfo[] = [
   {
     tokenAddress: constants.mWETHAddress,
     name: "Wrapped Ether",
-    symbol: "wETH",
+    symbol: "mWETH",
     decimals: 18,
     isActive: true,
     icon: <SaudiRiyal />,
@@ -121,7 +121,7 @@ const collateralAssets: SyntheticAssetInfo[] = [
   {
     tokenAddress: constants.mUSDCAddress,
     name: "USDC",
-    symbol: "USDC",
+    symbol: "mUSDC",
     isActive: true,
     decimals: 6,
     icon: <RussianRuble />,
@@ -267,6 +267,7 @@ export default function Home() {
   const [openDialog, setOpenDialog] = useState<
     "deposit" | "withdrawal" | "close-position" | null
   >(null);
+  const [selectedPosition, setSelectedPosition] = useState<PositionDialogProps | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const { writeContract, writeContractAsync } = useWriteContract({
     mutation: {
@@ -380,13 +381,13 @@ export default function Home() {
     let _allowance;
 
     switch (collateralWatched.symbol) {
-      case "USDC":
+      case "mUSDC":
         _allowance = mUSDCAllowance;
         break;
-      case "wETH":
+      case "mWETH":
         _allowance = mWETHAllowance;
         break;
-      case "cbBTC":
+      case "mWBTC":
         _allowance = mWBTCAllowance;
         break;
 
@@ -479,12 +480,11 @@ export default function Home() {
 
       if (!mint || !collateral) return;
 
-      const index = collateralAssetsWithBalance.findIndex(
-        (collateralAsset) => collateralAsset.symbol === collateral?.symbol,
+      const asset = collateralAssetsWithBalance.find(
+        (collateralAsset) => collateralAsset.symbol === collateral?.symbol
       );
-      const asset = collateralAssetsWithBalance[index];
       const inputAmount = BigInt(
-        Math.floor(Number(value) * 10 ** asset.decimals!),
+        Math.floor(Number(value) * 10 ** (asset?.decimals as number)),
       );
 
       const res = await readContract(wagmiConfig, {
@@ -497,13 +497,10 @@ export default function Home() {
       const result = res as bigint[];
       // we assuming the decimals here
       const newAmount = Number(result[0]) / 10 ** 18;
-      form.setValue("mintAmount", newAmount, {
-        shouldValidate: true,
-      });
 
       setCollateralValue(result[1]);
       setSynthAmountToBeMinted(result[0])
-      form.setValue("mintAmount", Number(newAmount), {
+      form.setValue("mintAmount", newAmount, {
         shouldValidate: true,
       });
     },
@@ -521,7 +518,9 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen w-full">
+      {/* @ts-expect-error we dont care about these issues rn */}
       <DepositDialog
+        {...selectedPosition}
         open={openDialog === "deposit"}
         onOpenChange={(v) =>
           v ? setOpenDialog("deposit") : setOpenDialog(null)
@@ -569,16 +568,14 @@ export default function Home() {
                       withinBalance: (value) => {
                         const collateral = form.getValues().collateral;
 
-                        const index = collateralAssetsWithBalance.findIndex(
-                          (collateralAsset) =>
-                            collateralAsset.symbol === collateral?.symbol,
+                        const asset = collateralAssetsWithBalance.find(
+                          (collateralAsset) => collateralAsset.symbol === collateral?.symbol
                         );
-                        const asset = collateralAssetsWithBalance[index];
 
                         const inputAmount = BigInt(
-                          Math.floor(Number(value) * 10 ** asset.decimals!),
+                          Math.floor(Number(value) * 10 ** (asset?.decimals as number)),
                         );
-                        const assetBalance = asset.balance!;
+                        const assetBalance = asset?.balance as bigint;
 
                         return (
                           inputAmount <= assetBalance ||
@@ -867,7 +864,17 @@ export default function Home() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent>
                                 <DropdownMenuItem
-                                  onClick={() => setOpenDialog("deposit")}
+                                  onClick={() => {
+                                    setOpenDialog("deposit")
+                                    setSelectedPosition(
+                                      {
+                                        positionToCheck: position,
+                                        collateral: collateralAssetsWithBalance.find(
+                                          (collateralAsset) => collateralAsset.symbol === position.collateralSymbol
+                                        ),
+                                        allowance: allowance
+                                      })
+                                  }}
                                 >
                                   <BanknoteArrowUp />
                                   Deposit
