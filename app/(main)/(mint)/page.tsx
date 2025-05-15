@@ -596,14 +596,6 @@ export default function Home() {
     handleUpdateMintedAmount,
   ]);
 
-  const calculateLiquidationPrice = (position: PositionDetails): number => {
-    const collateralUsd = Number(position.collateralUsdValue) / 1e18;
-    const minted = Number(position.mintedAmount) / 1e18;
-    const ratio = Number(position.requiredRatio) / 10000;
-
-    return collateralUsd / (minted * ratio);
-  };
-
   function getDecimalsPerCollateralSymbol(symbol: string): number {
     switch (symbol) {
       case "mUSDC":
