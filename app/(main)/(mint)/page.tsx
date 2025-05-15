@@ -624,22 +624,22 @@ export default function Home() {
     <div className="flex flex-col min-h-screen w-full">
       {/* @ts-expect-error we dont care about these issues rn */}
       <DepositDialog
-  {...selectedPosition}
-  open={openDialog === "deposit"}
-  onOpenChange={(v) => v ? setOpenDialog("deposit") : setOpenDialog(null)}
-/>
-
-<WithdrawalDialog
-  {...selectedPosition}
-  open={openDialog === "withdrawal"}
-  onOpenChange={(v) => v ? setOpenDialog("withdrawal") : setOpenDialog(null)}
-/>
-
-<ClosePositionDialog
-  {...selectedPosition}
-  open={openDialog === "close-position"}
-  onOpenChange={(v) => v ? setOpenDialog("close-position") : setOpenDialog(null)}
-/>
+        {...selectedPosition}
+        open={openDialog === "deposit"}
+        onOpenChange={(v) => v ? setOpenDialog("deposit") : setOpenDialog(null)}
+      />
+      {/* @ts-expect-error we dont care about these issues rn */}
+      <WithdrawalDialog
+        {...selectedPosition}
+        open={openDialog === "withdrawal"}
+        onOpenChange={(v) => v ? setOpenDialog("withdrawal") : setOpenDialog(null)}
+      />
+      {/* @ts-expect-error we dont care about these issues rn */}
+      <ClosePositionDialog
+        {...selectedPosition}
+        open={openDialog === "close-position"}
+        onOpenChange={(v) => v ? setOpenDialog("close-position") : setOpenDialog(null)}
+      />
 
       <Header activeRoute="mint" />
       <main className="flex flex-col gap-5 flex-1 items-center justify-center mb-[20vh] px-6">

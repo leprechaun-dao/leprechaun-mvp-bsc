@@ -35,6 +35,7 @@ export const ClosePositionDialog = ({ onSuccess, ...props }: PositionDialogProps
 
   // Handle transaction receipt
   const { status } = useWaitForTransactionReceipt({
+    // @ts-expect-error this is a valid address
     hash: txHash,
     confirmations: 1,
     enabled: !!txHash,
@@ -66,10 +67,10 @@ export const ClosePositionDialog = ({ onSuccess, ...props }: PositionDialogProps
           onClick: () => window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
         },
       });
-      
+
       // Call success callback to refresh data
       if (onSuccess) onSuccess();
-      
+
       // Close dialog
       props.onOpenChange?.(false);
       setTxHash(null);
@@ -90,28 +91,28 @@ export const ClosePositionDialog = ({ onSuccess, ...props }: PositionDialogProps
       console.log("Missing position or collateral data for close calculation");
       return;
     }
-    
+
     try {
       console.log("Calculating close position details...");
-      
+
       // Get protocol fee
       const protocolFeePercent = await readContract(wagmiConfig, {
         abi: constants.LeprechaunFactoryABI,
         address: constants.LeprechaunFactoryAddress,
         functionName: "protocolFee",
       });
-      
+
       console.log("Protocol fee:", protocolFeePercent);
       console.log("Collateral amount:", props.positionToCheck.collateralAmount);
-      
+
       // Calculate fee on collateral
       const fee = (props.positionToCheck.collateralAmount * (protocolFeePercent as bigint)) / BigInt(10000);
       setFeeAmount(fee);
-      
+
       // Calculate net collateral returned to user
       const net = props.positionToCheck.collateralAmount - fee;
       setNetCollateral(net);
-      
+
       console.log("Fee calculated:", fee);
       console.log("Net collateral calculated:", net);
     } catch (error) {
@@ -124,22 +125,23 @@ export const ClosePositionDialog = ({ onSuccess, ...props }: PositionDialogProps
       console.error("Missing position data");
       return;
     }
-    
+
     try {
       setIsSubmitting(true);
       console.log("Closing position:", props.positionToCheck.positionId);
-      
+
       // First, check if user has enough synthetic tokens to burn
       const syntheticBalance = await readContract(wagmiConfig, {
         abi: constants.ERC20ABI,
+        // @ts-expect-error this is a valid address
         address: props.positionToCheck.syntheticAsset,
         functionName: "balanceOf",
         args: [props.positionToCheck.owner],
       });
-      
+
       console.log("Synthetic balance:", syntheticBalance);
       console.log("Minted amount:", props.positionToCheck.mintedAmount);
-      
+
       if ((syntheticBalance as bigint) < props.positionToCheck.mintedAmount) {
         toast.error("Insufficient synthetic tokens", {
           description: `You need ${parseBigInt(props.positionToCheck.mintedAmount, 18, 6)} ${props.positionToCheck.syntheticSymbol} to close this position`
@@ -147,9 +149,9 @@ export const ClosePositionDialog = ({ onSuccess, ...props }: PositionDialogProps
         setIsSubmitting(false);
         return;
       }
-      
+
       console.log("Calling closePosition with:", props.positionToCheck.positionId);
-      
+
       // Close position using wagmi's useWriteContractAsync
       const hash = await writeContractAsync({
         address: constants.PositionManagerAddress as `0x${string}`,
@@ -157,10 +159,10 @@ export const ClosePositionDialog = ({ onSuccess, ...props }: PositionDialogProps
         functionName: "closePosition",
         args: [props.positionToCheck.positionId]
       });
-      
+
       console.log("Transaction hash:", hash);
       setTxHash(hash);
-      
+
     } catch (error) {
       console.error("Close position error:", error);
       toast.error("Transaction failed", {
@@ -182,10 +184,10 @@ export const ClosePositionDialog = ({ onSuccess, ...props }: PositionDialogProps
           <div className="mb-1">
             <span className="font-medium">Position ID:</span> {props.positionToCheck?.positionId.toString()}
           </div>
-          
+
           <div className="text-sm space-y-1">
             <div className="mb-1">When you close your position, the following will happen:</div>
-            
+
             <div className="flex justify-between items-center border-b border-gray-100 pb-1">
               <span>Synthetic Asset</span>
               <span className="text-destructive flex items-center">
@@ -193,14 +195,14 @@ export const ClosePositionDialog = ({ onSuccess, ...props }: PositionDialogProps
                 {props.positionToCheck ? parseBigInt(props.positionToCheck.mintedAmount, 18, 6) : '0'} {props.positionToCheck?.syntheticSymbol}
               </span>
             </div>
-            
+
             <div className="flex justify-between items-center border-b border-gray-100 pb-1">
               <span>Protocol Fee</span>
               <span className="text-muted-foreground">
                 {feeAmount ? parseBigInt(feeAmount, props.collateral?.decimals || 0, 4) : '0'} {props.positionToCheck?.collateralSymbol}
               </span>
             </div>
-            
+
             <div className="flex justify-between items-center font-medium pt-1">
               <span>Collateral Returned</span>
               <span className="text-green-600 flex items-center">

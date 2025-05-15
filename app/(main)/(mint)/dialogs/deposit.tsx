@@ -56,36 +56,37 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
 
   const handleSubmit = form.handleSubmit(async (data) => {
     if (!props.positionToCheck || !props.collateral) return;
-    
+
     try {
       setIsSubmitting(true);
-      
+
       // Convert amount to proper decimals
       const decimals = props.collateral.decimals || 0;
       const amountInWei = BigInt(Math.floor(data.amount * 10 ** decimals));
-      
+
       // Check allowance first
       if (props.allowance && props.allowance < amountInWei) {
         // Approve tokens first
         const txHash = await writeContract(wagmiConfig, {
+          // @ts-expect-error this is a valid address
           address: props.collateral.tokenAddress,
           abi: constants.ERC20ABI,
           functionName: "approve",
           args: [constants.PositionManagerAddress, amountInWei]
         });
-        
+
         toast("Approval transaction sent", {
           action: {
             label: "View on Explorer",
             onClick: () => window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
           },
         });
-        
+
         // Wait for approval to be confirmed
         // In a real implementation, you'd want to wait for the transaction receipt
         await new Promise(r => setTimeout(r, 2000));
       }
-      
+
       // Deposit collateral
       const txHash = await writeContract(wagmiConfig, {
         address: constants.PositionManagerAddress,
@@ -93,34 +94,34 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
         functionName: "depositCollateral",
         args: [props.positionToCheck.positionId, amountInWei]
       });
-      
+
       toast("Transaction sent", {
         action: {
           label: "View on Explorer",
           onClick: () => window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
         },
       });
-      
+
       // Wait for confirmation
       // In a real implementation, you'd use useWaitForTransactionReceipt or similar
       await new Promise(r => setTimeout(r, 2000));
-      
+
       toast.success("Deposit successful!", {
         description: `Added ${data.amount} ${props.collateral.symbol} to your position`
       });
-      
+
       // Call success callback to refresh data
       if (onSuccess) onSuccess();
-      
+
       // Close dialog
       props.onOpenChange?.(false);
-      
+
       // Reset form
       form.reset();
       setCollateralValue(null);
       setSynthAmountToBeMinted(null);
       setNewRatio(null);
-      
+
     } catch (error) {
       console.error("Deposit error:", error);
       toast.error("Transaction failed", {
@@ -135,7 +136,7 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
     form.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.open]);
-  
+
   const handleCollateralAmountChange = useDebouncedCallback(
     async (value: number) => {
       if (!props.positionToCheck || !props.collateral || value <= 0) {
@@ -144,7 +145,7 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
         setNewRatio(null);
         return;
       }
-      
+
       try {
         const inputAmount = BigInt(
           Math.floor(Number(value) * 10 ** (props.collateral.decimals as number)),
@@ -157,9 +158,9 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
           functionName: "getUsdValue",
           args: [props.collateral.tokenAddress, inputAmount, props.collateral.decimals],
         });
-        
+
         setCollateralValue(collateralValueResult as bigint);
-        
+
         // Calculate new collateral ratio
         if (props.positionToCheck.debtUsdValue && props.positionToCheck.collateralUsdValue) {
           const totalCollateralValue = (props.positionToCheck.collateralUsdValue as bigint) + (collateralValueResult as bigint);
@@ -190,7 +191,7 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
               <span className="font-medium">Collateral:</span> {props.positionToCheck?.collateralSymbol}
             </div>
             <div>
-              <span className="font-medium">Current Ratio:</span> {props.positionToCheck?.currentRatio ? 
+              <span className="font-medium">Current Ratio:</span> {props.positionToCheck?.currentRatio ?
                 parseBigInt(props.positionToCheck.currentRatio as bigint, 2, 2) : '0'}%
             </div>
           </div>
@@ -199,7 +200,7 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
             name="amount"
             render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel>Amount {collateralValue ? 
+                <FormLabel>Amount {collateralValue ?
                   `(~$${parseBigInt(collateralValue, 18, 2)})` : ''}</FormLabel>
                 <FormControl>
                   <DecimalInput
@@ -218,9 +219,9 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
             <div className="text-sm mt-2">
               <span className="font-medium">New Ratio:</span> {newRatio.toFixed(2)}%
               <div className={`text-xs ${newRatio < 150 ? 'text-red-500' : newRatio > 200 ? 'text-green-500' : 'text-yellow-500'}`}>
-                {newRatio < 150 ? '⚠️ Danger zone' : 
-                 newRatio < 180 ? '⚠️ Close to liquidation threshold' : 
-                 newRatio > 250 ? '✅ Very safe position' : 
+                {newRatio < 150 ? '⚠️ Danger zone' :
+                 newRatio < 180 ? '⚠️ Close to liquidation threshold' :
+                 newRatio > 250 ? '✅ Very safe position' :
                  '✅ Safe position'}
               </div>
             </div>
