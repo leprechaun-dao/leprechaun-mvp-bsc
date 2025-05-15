@@ -66,7 +66,6 @@ import {
   useConnect,
   useReadContract,
   useReadContracts,
-  useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
 import { assetsImages } from "../../../utils/constants";
@@ -263,26 +262,13 @@ export default function Home() {
 
   const [selectedPosition, setSelectedPosition] =
     useState<PositionDialogProps | null>(null);
-  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const { writeContract, writeContractAsync } = useWriteContract({
     mutation: {
-      onSuccess(data) {
-        setTxHash(data);
-      },
       onError(error) {
-        console.error("❌ Error en la tx:", error);
+        console.error("❌ Error on tx:", error);
         toast.error("Transaction failed! Please try again");
       },
     },
-  });
-
-  // const approveTokenWriteContract =
-
-  const { data: receipt, status } = useWaitForTransactionReceipt({
-    // @ts-expect-error address is alread 0x${string}
-    hash: txHash,
-    confirmations: 4,
-    enabled: !!txHash,
   });
 
   const [pricedPositions, setPricedPositions] = useState<
@@ -290,43 +276,6 @@ export default function Home() {
   >(null);
 
   useEffect(() => {
-    if (txHash && status === "pending") {
-      toast("Transaction sent.", {
-        action: {
-          label: "View on Basescan",
-          onClick: () => {
-            window.open(`https://basescan.io/tx/${txHash}`, "_blank");
-          },
-        },
-      });
-    }
-
-    if (status === "success") {
-      console.log("✅ Tx confirmed:", receipt);
-      // TODO handle approve and mint notifications
-      toast.success("Transaction confirmed.", {
-        action: {
-          label: (
-            <div className="flex gap-2 items-center">
-              <Image
-                src="/uniswap.svg"
-                alt="Uniswap Logo"
-                width={24}
-                height={24}
-              />
-              Pool on Uniswap
-            </div>
-          ),
-          onClick: () => {
-            window.open(`https://basescan.io/tx/${txHash}`, "_blank");
-          },
-        },
-      });
-
-      setTxHash(null);
-      // TODO if the tx is an approval tx, make allowance the same value as the collateralAmount
-    }
-
     if (openPositionsContractCall.status === "success") {
       const fetchPrices = async () => {
         const pPositions: PositionDetails[] = [];
@@ -355,13 +304,7 @@ export default function Home() {
 
       fetchPrices();
     }
-  }, [
-    status,
-    receipt,
-    txHash,
-    openPositionsContractCall.status,
-    openPositionsContractCall.data,
-  ]);
+  }, [openPositionsContractCall.status, openPositionsContractCall.data]);
 
   const collateralWatched = form.watch("collateral") as SyntheticAssetInfo;
   const collateralAmountWatched = form.watch("collateralAmount") as number;
@@ -446,9 +389,32 @@ export default function Home() {
         args: [positionManagerAddress, cleanCollateralAmount],
       });
 
-      await waitForTransactionReceipt(wagmiConfig, {
-        hash: approvalTxHash,
-        confirmations: 3,
+      toast("Transaction sent.", {
+        action: {
+          label: "View on Basescan",
+          onClick: () => {
+            window.open(`https://basescan.io/tx/${approvalTxHash}`, "_blank");
+          },
+        },
+      });
+
+      const approvalConfirmationTxHash = await waitForTransactionReceipt(
+        wagmiConfig,
+        {
+          hash: approvalTxHash,
+          confirmations: 3,
+        },
+      );
+      toast.success("Transaction confirmed.", {
+        action: {
+          label: "View on Basescan",
+          onClick: () => {
+            window.open(
+              `https://basescan.io/tx/${approvalConfirmationTxHash}`,
+              "_blank",
+            );
+          },
+        },
       });
     } else {
       const abi = constants.PositionManagerABI;
@@ -467,9 +433,44 @@ export default function Home() {
         ],
       });
 
-      await waitForTransactionReceipt(wagmiConfig, {
+      toast("Transaction sent.", {
+        action: {
+          label: "View on Basescan",
+          onClick: () => {
+            window.open(
+              `https://basescan.io/tx/${createPositionTxHash}`,
+              "_blank",
+            );
+          },
+        },
+      });
+
+      const confirmationTxHash = await waitForTransactionReceipt(wagmiConfig, {
         hash: createPositionTxHash,
         confirmations: 3,
+      });
+
+      toast.success("Transaction confirmed.", {
+        action: {
+          label: (
+            <div className="flex gap-2 items-center">
+              <Image
+                src="/uniswap.svg"
+                alt="Uniswap Logo"
+                width={24}
+                height={24}
+              />
+              Pool on Uniswap
+            </div>
+          ),
+          onClick: () => {
+            // TODO: Update this to Pool URL
+            window.open(
+              `https://basescan.io/tx/${confirmationTxHash}`,
+              "_blank",
+            );
+          },
+        },
       });
 
       await openPositionsContractCall.refetch();
