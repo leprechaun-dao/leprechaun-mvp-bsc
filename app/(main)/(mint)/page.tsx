@@ -56,10 +56,6 @@ import {
   ChevronDown,
   EllipsisVertical,
   Loader2,
-  RussianRuble,
-  SaudiRiyal,
-  SwissFranc,
-  VaultIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
@@ -73,6 +69,7 @@ import {
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
+import { assetsImages } from "../../../utils/constants";
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog, PositionDialogProps } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
@@ -92,7 +89,14 @@ const TokenSelectorButton = ({
             Change Token
           </span>
           <span className="group-hover:hidden group-focus-visible:hidden flex items-center gap-1">
-            {selectedSymbol}
+            <Image
+              src={assetsImages[selectedSymbol]}
+              alt={`${selectedSymbol} Icon`}
+              className="rounded-full border-2 border-neutral-700"
+              width={16}
+              height={16}
+            />
+            <span className="leading-none">{selectedSymbol}</span>
             <ChevronDown className="size-3" />
           </span>
         </>
@@ -110,7 +114,6 @@ const collateralAssets: SyntheticAssetInfo[] = [
     symbol: "mWBTC",
     isActive: true,
     decimals: 8,
-    icon: <SwissFranc />,
   },
   {
     tokenAddress: constants.mWETHAddress,
@@ -118,7 +121,6 @@ const collateralAssets: SyntheticAssetInfo[] = [
     symbol: "mWETH",
     decimals: 18,
     isActive: true,
-    icon: <SaudiRiyal />,
   },
   {
     tokenAddress: constants.mUSDCAddress,
@@ -126,7 +128,6 @@ const collateralAssets: SyntheticAssetInfo[] = [
     symbol: "mUSDC",
     isActive: true,
     decimals: 6,
-    icon: <RussianRuble />,
   },
 ];
 
@@ -217,22 +218,6 @@ export default function Home() {
     mWBTCAllowance,
   ] = allowanceAndBalanceContract.data || [];
 
-  const getAssetIcon = (
-    sSymbol: string,
-    className: string,
-  ): React.ReactNode => {
-    switch (sSymbol) {
-      case "sOIL":
-        return <SwissFranc className={className} />;
-      case "sDOW":
-        return <RussianRuble className={className} />;
-      case "sXAU":
-        return <SaudiRiyal className={className} />;
-      default:
-        return <VaultIcon className={className} />;
-    }
-  };
-
   const formattedAssets = useMemo(() => {
     if (
       !syntheticAssetsContract.data ||
@@ -248,7 +233,6 @@ export default function Home() {
         minCollateralRatio: item.minCollateralRatio,
         auctionDiscount: item.auctionDiscount,
         isActive: item.isActive,
-        icon: getAssetIcon(item.name, "h-6 w-6") || <VaultIcon />,
       }),
     );
   }, [syntheticAssetsContract.data]);
@@ -935,24 +919,41 @@ export default function Home() {
                       .map((position) => (
                         <TableRow key={position.positionId}>
                           <TableCell>
-                            {getAssetIcon(
-                              position.syntheticSymbol,
-                              "inline-block size-4",
-                            )}
-                            {position.syntheticSymbol}
+                            <div className="flex items-center gap-1">
+                              <Image
+                                src={assetsImages[position.syntheticSymbol]}
+                                alt={`${position.syntheticSymbol} Icon`}
+                                className="rounded-full"
+                                width={16}
+                                height={16}
+                              />
+                              <span className="leading-none">
+                                {position.syntheticSymbol}
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell>
-                            {parseBigInt(position.mintedAmount, 18, 5)}
+                            {parseBigInt(position.mintedAmount, 18, 3)}
                           </TableCell>
                           <TableCell>
-                            {parseBigInt(
-                              position.collateralAmount,
-                              getDecimalsPerCollateralSymbol(
-                                position.collateralSymbol,
-                              ),
-                              4,
-                            )}{" "}
-                            {position.collateralSymbol}{" "}
+                            <div className="flex items-center gap-1">
+                              <Image
+                                src={
+                                  assetsImages[position.collateralSymbol || ""]
+                                }
+                                alt={`${position.collateralSymbol} Icon`}
+                                className="rounded-full"
+                                width={16}
+                                height={16}
+                              />
+                              {parseBigInt(
+                                position.collateralAmount,
+                                getDecimalsPerCollateralSymbol(
+                                  position.collateralSymbol,
+                                ),
+                                4,
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell>
                             {parseBigInt(position.currentRatio as bigint, 2, 2)}
