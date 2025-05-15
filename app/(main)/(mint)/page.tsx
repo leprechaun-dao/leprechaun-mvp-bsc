@@ -845,7 +845,8 @@ export default function Home() {
                     <TableHead>Amount</TableHead>
                     <TableHead>Collateral</TableHead>
                     <TableHead>Current Price</TableHead>
-                    <TableHead>Liq. Price</TableHead>
+                    <TableHead>Current Ratio</TableHead>
+                    <TableHead>Liq. Ratio</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -867,6 +868,9 @@ export default function Home() {
                             ${
                               calculateLiquidationPrice(position).toLocaleString(undefined, { currency: "USD", maximumFractionDigits: 2})
                             }
+                          </TableCell>
+                          <TableCell>
+                            %RATIO
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
