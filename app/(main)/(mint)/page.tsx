@@ -72,6 +72,7 @@ import { assetsImages } from "../../../utils/constants";
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog, PositionDialogProps } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
+import { sendTxSentToast, sendTxSuccessToast } from "./dialogs/toasts";
 
 const TokenSelectorButton = ({
   selectedSymbol,
@@ -389,14 +390,7 @@ export default function Home() {
         args: [positionManagerAddress, cleanCollateralAmount],
       });
 
-      toast("Transaction sent.", {
-        action: {
-          label: "View on Basescan",
-          onClick: () => {
-            window.open(`https://basescan.io/tx/${approvalTxHash}`, "_blank");
-          },
-        },
-      });
+      sendTxSentToast(approvalTxHash)
 
       const approvalConfirmationTxHash = await waitForTransactionReceipt(
         wagmiConfig,
@@ -405,17 +399,8 @@ export default function Home() {
           confirmations: 3,
         },
       );
-      toast.success("Transaction confirmed.", {
-        action: {
-          label: "View on Basescan",
-          onClick: () => {
-            window.open(
-              `https://basescan.io/tx/${approvalConfirmationTxHash}`,
-              "_blank",
-            );
-          },
-        },
-      });
+
+      sendTxSuccessToast(approvalConfirmationTxHash.transactionHash)
     } else {
       const abi = constants.PositionManagerABI;
 
@@ -433,19 +418,9 @@ export default function Home() {
         ],
       });
 
-      toast("Transaction sent.", {
-        action: {
-          label: "View on Basescan",
-          onClick: () => {
-            window.open(
-              `https://basescan.io/tx/${createPositionTxHash}`,
-              "_blank",
-            );
-          },
-        },
-      });
+      sendTxSentToast(createPositionTxHash)
 
-      const confirmationTxHash = await waitForTransactionReceipt(wagmiConfig, {
+      const confirmationTx = await waitForTransactionReceipt(wagmiConfig, {
         hash: createPositionTxHash,
         confirmations: 3,
       });
@@ -466,7 +441,7 @@ export default function Home() {
           onClick: () => {
             // TODO: Update this to Pool URL
             window.open(
-              `https://basescan.io/tx/${confirmationTxHash}`,
+              `https://basescan.org/tx/${confirmationTx.transactionHash}`,
               "_blank",
             );
           },
