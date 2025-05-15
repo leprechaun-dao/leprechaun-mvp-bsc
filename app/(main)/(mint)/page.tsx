@@ -645,10 +645,6 @@ export default function Home() {
                             className="h-14"
                             {...field}
                             disabled={!form.watch("collateral")}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              handleCollateralAmountChange(e);
-                            }}
                           />
                         </FormControl>
 
@@ -816,48 +812,53 @@ export default function Home() {
                     </FormItem>
                   )}
                 />
-                <Button
-                  disabled={
-                    account.status !== "connected" || loadingMintedAmount
-                  }
-                  className="mt-5"
-                  onClick={handleSubmitMint}
-                >
-                  {collateralWatched &&
-                  allowance &&
-                  cleanCollateralAmount &&
-                  allowance >= cleanCollateralAmount
-                    ? "Mint"
-                    : "Approve"}
-                </Button>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col w-full mt-2">
                   <Button
-                    id="USDC"
-                    variant="secondary"
-                    disabled={account.status !== "connected"}
-                    onClick={mintMockCollateral}
+                    disabled={
+                      account.status !== "connected" || loadingMintedAmount
+                    }
+                    onClick={handleSubmitMint}
                   >
-                    mUSDC
+                    {collateralWatched &&
+                    allowance &&
+                    cleanCollateralAmount &&
+                    allowance >= cleanCollateralAmount
+                      ? "Mint"
+                      : "Approve"}
                   </Button>
-                  <Button
-                    id="wBTC"
-                    variant="secondary"
-                    disabled={account.status !== "connected"}
-                    onClick={mintMockCollateral}
-                  >
-                    mWBTC
-                  </Button>
-                  <Button
-                    id="wETH"
-                    variant="secondary"
-                    disabled={account.status !== "connected"}
-                    onClick={mintMockCollateral}
-                  >
-                    mWETH
-                  </Button>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    <Button
+                      id="USDC"
+                      variant="secondary"
+                      disabled={account.status !== "connected"}
+                      onClick={mintMockCollateral}
+                    >
+                      mUSDC
+                    </Button>
+                    <Button
+                      id="wBTC"
+                      variant="secondary"
+                      disabled={account.status !== "connected"}
+                      onClick={mintMockCollateral}
+                    >
+                      mWBTC
+                    </Button>
+                    <Button
+                      id="wETH"
+                      variant="secondary"
+                      disabled={account.status !== "connected"}
+                      onClick={mintMockCollateral}
+                    >
+                      mWETH
+                    </Button>
+                  </div>
                 </div>
+                <CardFooter>
+                  <div className="w-full text-center text-xs text-neutral-400">
+                    You can only mint during market hours.
+                  </div>
+                </CardFooter>
               </div>
-              <CardFooter></CardFooter>
             </CardContent>
           </Form>
         </Card>
