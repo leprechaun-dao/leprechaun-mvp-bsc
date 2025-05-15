@@ -19,7 +19,7 @@ export const PositionManagerAddress =
   "0x401d1cD4D0ff1113458339065Cf9a1f2e8425afb";
 export const OracleInterfaceAddress =
   "0xBc2e651eD3566c6dF862815Ed05b99eFb9bC0255";
-export const LENSAddress = "0x9757edD261BFAE5e1038Aa9413c289c2318B8c3D";
+export const LENSAddress = "0x80d4D0e68efDBB8b16fdD1e8ff7511ecc3869503";
 
 export const sDOWAddress = "0xD14F0B478F993967240Aa5995eb2b1Ca6810969a";
 

@@ -146,6 +146,10 @@ const lensContract = {
   address: constants.LENSAddress,
   abi: constants.LeprechaunLensABI,
 } as const;
+const factoryContract = {
+  address: constants.LeprechaunFactoryAddress,
+  abi: constants.LeprechaunFactoryABI,
+} as const;
 
 export default function Home() {
   const form = useForm();
@@ -272,6 +276,7 @@ export default function Home() {
   const [openDialog, setOpenDialog] = useState<
     "deposit" | "withdrawal" | "close-position" | null
   >(null);
+
   const [selectedPosition, setSelectedPosition] =
     useState<PositionDialogProps | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
@@ -374,6 +379,37 @@ export default function Home() {
   const collateralWatched = form.watch("collateral") as SyntheticAssetInfo;
   const collateralAmountWatched = form.watch("collateralAmount") as number;
   const mintWatched = form.watch("mint") as SyntheticAssetInfo;
+  const collateralRatioWatched = form.watch("collateralRatio") as number;
+
+  const getMinCollateralRatioContract = useReadContract({
+    ...factoryContract,
+    functionName: "getEffectiveCollateralRatio",
+    args: [mintWatched?.tokenAddress, collateralWatched?.tokenAddress],
+    query: {
+      enabled:
+        !!account.address &&
+        !!mintWatched?.tokenAddress &&
+        !!collateralWatched?.tokenAddress,
+    },
+  });
+
+  const minCollateralRatio = useMemo(() => {
+    console.log(
+      "getMinCollateralRatioContract.data",
+      getMinCollateralRatioContract.data,
+    );
+
+    const result = getMinCollateralRatioContract.data as bigint;
+    const minCollateralRatio = result ? Number(result) / 100 : 150;
+
+    const currentCollateralRatio = form.getValues().collateralRatio;
+
+    if (currentCollateralRatio < minCollateralRatio) {
+      form.setValue("collateralRatio", minCollateralRatio);
+    }
+
+    return minCollateralRatio;
+  }, [getMinCollateralRatioContract.data]);
 
   const cleanCollateralAmount = useMemo(() => {
     if (!collateralWatched || collateralAmountWatched == null) return null;
@@ -483,10 +519,12 @@ export default function Home() {
       collateral,
       collateralAmount,
       mint,
+      collateralRatio,
     }: {
       mint: SyntheticAssetInfo;
       collateral: SyntheticAssetInfo;
       collateralAmount: number;
+      collateralRatio: number;
     }) => {
       try {
         const abi = constants.LeprechaunLensABI;
@@ -504,13 +542,19 @@ export default function Home() {
         const res = await readContract(wagmiConfig, {
           abi,
           address: address,
-          functionName: "getMintableAmount",
-          args: [mint.tokenAddress, collateral.tokenAddress, inputAmount],
+          functionName: "calculateMintAmountForTargetRatio",
+          args: [
+            mint.tokenAddress,
+            collateral.tokenAddress,
+            inputAmount,
+            collateralRatio * 100,
+          ],
         });
 
-        const result = res as bigint[];
+        const [mintAmount] = res as bigint[];
+
         // we assuming the decimals here
-        const newAmount = Number(result[0]) / 10 ** 18;
+        const newAmount = Number(mintAmount) / 10 ** 18;
 
         form.setValue("mintAmount", newAmount, {
           shouldValidate: true,
@@ -526,12 +570,18 @@ export default function Home() {
   const [loadingMintedAmount, setLoadingMintedAmount] = useState(false);
 
   useEffect(() => {
-    if (collateralWatched && collateralAmountWatched && mintWatched) {
+    if (
+      collateralWatched &&
+      collateralAmountWatched &&
+      mintWatched &&
+      collateralRatioWatched
+    ) {
       setLoadingMintedAmount(true);
       handleUpdateMintedAmount({
         collateral: collateralWatched,
         collateralAmount: collateralAmountWatched,
         mint: mintWatched,
+        collateralRatio: collateralRatioWatched,
       });
     } else {
       form.setValue("mintAmount", undefined);
@@ -541,6 +591,7 @@ export default function Home() {
     collateralWatched,
     collateralAmountWatched,
     mintWatched,
+    collateralRatioWatched,
     handleUpdateMintedAmount,
   ]);
 
@@ -644,7 +695,7 @@ export default function Home() {
                           <DecimalInput
                             className="h-14"
                             {...field}
-                            disabled={!form.watch("collateral")}
+                            disabled={!collateralWatched}
                           />
                         </FormControl>
 
@@ -783,12 +834,13 @@ export default function Home() {
                   }}
                   render={({ field, fieldState }) => (
                     <FormItem>
-                      <FormLabel className="mb-2">Collateral Ratio</FormLabel>
+                      <FormLabel className="mb-2">
+                        Collateral Ratio ({collateralRatioWatched}%)
+                      </FormLabel>
                       <FormControl>
                         <Slider
-                          min={150}
+                          min={minCollateralRatio}
                           max={250}
-                          step={50}
                           {...field}
                           value={[field.value]}
                           onValueChange={(value) => {
@@ -804,8 +856,7 @@ export default function Home() {
                           },
                         )}
                       >
-                        <span>150%</span>
-                        <span>200%</span>
+                        <span>{minCollateralRatio}%</span>
                         <span>250%</span>
                       </span>
                       <FormMessage />
