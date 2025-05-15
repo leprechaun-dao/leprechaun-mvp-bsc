@@ -90,3 +90,7 @@ export async function bulkCallGetters(
 
   return results;
 }
+
+export function parseBigInt(amount: bigint, targetDecimals: number, maximumDigits: number) {
+  return (Number(amount) / (10 * 10 ** targetDecimals)).toLocaleString(undefined, { maximumFractionDigits: maximumDigits })
+}

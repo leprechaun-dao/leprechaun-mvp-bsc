@@ -1,3 +1,4 @@
+import { BigIntStatsListener } from "fs";
 import { ReactNode } from "react";
 
 export interface SyntheticAssetInfo {
@@ -15,4 +16,25 @@ export interface SyntheticAssetInfo {
   assetID?: string;
   label?: string;
   icon?: ReactNode;
+}
+
+export interface PositionDetails {
+  positionId: bigint;
+  owner: string;
+  syntheticAsset: string;
+  syntheticSymbol: string;
+  collateralAsset: string;
+  collateralSymbol: string;
+  collateralAmount: bigint;
+  mintedAmount: bigint;
+  lastUpdateTimestamp: bigint;
+  isActive: boolean;
+  currentRatio: bigint;
+  requiredRatio: bigint;
+  isUnderCollateralized: boolean;
+  collateralUsdValue: bigint;
+  debtUsdValue: bigint;
+
+  mintedCurrentUsdValue?: bigint;
+  collateralCurrentUsdValue?: bigint;
 }

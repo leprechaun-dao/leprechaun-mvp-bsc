@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/table";
 import * as constants from "@/utils/constants";
 import { cn } from "@/utils/css";
-import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
+import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { readContract } from "@wagmi/core";
 import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
 import {
@@ -59,7 +59,7 @@ import {
   VaultIcon,
 } from "lucide-react";
 import Image from "next/image";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
@@ -73,6 +73,7 @@ import {
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
+import { parseBigInt } from "@/utils/web3";
 
 const TokenSelectorButton = ({
   selectedSymbol,
@@ -150,9 +151,18 @@ export default function Home() {
   const account = useAccount();
   const positionManagerAddress = constants.PositionManagerAddress;
 
-  const synthenticAssetsContract = useReadContract({
+  const syntheticAssetsContract = useReadContract({
     ...lensContract,
     functionName: "getAllSyntheticAssets",
+  });
+
+  const openPositionsContractCall = useReadContract({
+    ...lensContract,
+    functionName: "getUserPositions",
+    args: [account.address],
+    query: {
+      enabled: !!account.address
+    }
   });
 
   const allowanceAndBalanceContract = useReadContracts({
@@ -201,20 +211,27 @@ export default function Home() {
     mWBTCAllowance,
   ] = allowanceAndBalanceContract.data || [];
 
+  const getAssetIcon = (sSymbol: string, className: string): React.ReactNode => {
+    switch (sSymbol) {
+      case 'sOIL':
+        return <SwissFranc className={className} />;
+      case 'sDOW':
+        return <RussianRuble className={className} />;
+      case 'sXAU':
+        return <SaudiRiyal className={className} />;
+      default:
+        return <VaultIcon className={className} />;
+    }
+  };
+
   const formattedAssets = useMemo(() => {
     if (
-      !synthenticAssetsContract.data ||
-      (synthenticAssetsContract.data as SyntheticAssetInfo[]).length === 0
+      !syntheticAssetsContract.data ||
+      (syntheticAssetsContract.data as SyntheticAssetInfo[]).length === 0
     )
       return [];
 
-    const iconMap: Record<string, ReactNode> = {
-      CHF: <SwissFranc />,
-      sDOW: <RussianRuble />,
-      SRL: <SaudiRiyal />,
-    };
-
-    return (synthenticAssetsContract.data as SyntheticAssetInfo[]).map(
+    return (syntheticAssetsContract.data as SyntheticAssetInfo[]).map(
       (item: SyntheticAssetInfo) => ({
         tokenAddress: item.tokenAddress,
         name: item.name,
@@ -222,10 +239,10 @@ export default function Home() {
         minCollateralRatio: item.minCollateralRatio,
         auctionDiscount: item.auctionDiscount,
         isActive: item.isActive,
-        icon: iconMap[item.name] || <VaultIcon />,
+        icon: getAssetIcon(item.name, "h-6 w-6") || <VaultIcon />,
       }),
     );
-  }, [synthenticAssetsContract.data]);
+  }, [syntheticAssetsContract.data]);
 
   const collateralAssetsWithBalance = useMemo(() => {
     if (
@@ -269,13 +286,15 @@ export default function Home() {
     enabled: !!txHash,
   });
 
+  const [pricedPositions, setPricedPositions] = useState<PositionDetails[]|null>(null)
+
   useEffect(() => {
     if (txHash && status === "pending") {
       toast("Transaction sent.", {
         action: {
-          label: "View on Etherscan",
+          label: "View on Basescan",
           onClick: () => {
-            window.open(`https://etherscan.io/tx/${txHash}`, "_blank");
+            window.open(`https://basescan.io/tx/${txHash}`, "_blank");
           },
         },
       });
@@ -298,7 +317,7 @@ export default function Home() {
             </div>
           ),
           onClick: () => {
-            window.open(`https://etherscan.io/tx/${txHash}`, "_blank");
+            window.open(`https://basescan.io/tx/${txHash}`, "_blank");
           },
         },
       });
@@ -306,7 +325,36 @@ export default function Home() {
       setTxHash(null);
       // TODO if the tx is an approval tx, make allowance the same value as the collateralAmount
     }
-  }, [status, receipt, txHash]);
+
+    if (openPositionsContractCall.status === "success") {
+      const fetchPrices = async () => {
+        const pricedPositions: PositionDetails[] = [];
+        const positions = openPositionsContractCall.data as PositionDetails[];
+
+        const pricePromises = positions.map(position =>
+          readContract(wagmiConfig, {
+            abi: constants.OracleInterfaceABI,
+            address: constants.OracleInterfaceAddress,
+            functionName: "getNormalizedPrice",
+            args: [position.syntheticAsset],
+          })
+        );
+
+        const prices = await Promise.all(pricePromises);
+
+        for (let i = 0; i < positions.length; i++) {
+          pricedPositions.push({
+            ...positions[i],
+            mintedCurrentUsdValue: (prices[i] as bigint[])[0]
+          });
+        }
+
+        setPricedPositions(pricedPositions);
+      };
+
+        fetchPrices();
+      }
+  }, [status, receipt, txHash, openPositionsContractCall.status, openPositionsContractCall.data]);
 
   const collateralWatched = form.watch("collateral");
   const collateralAmountWatched = form.watch("collateralAmount");
@@ -359,8 +407,6 @@ export default function Home() {
         functionName: "approve",
         args: [positionManagerAddress, cleanCollateralAmount],
       });
-
-
     } else {
       const abi = constants.PositionManagerABI;
 
@@ -378,6 +424,8 @@ export default function Home() {
           BigInt(Math.floor(data.mintAmount * 10 ** 18)),
         ],
       });
+
+      await openPositionsContractCall.refetch()
     }
 
     await allowanceAndBalanceContract.refetch();
@@ -463,6 +511,14 @@ export default function Home() {
     800,
   );
 
+  const calculateRatio = (position: PositionDetails): number => {
+    const collateralUsd = Number(position.collateralUsdValue) / 1e18;
+    const minted = Number(position.mintedAmount) / 1e18;
+    const ratio = Number(position.requiredRatio) / 10000;
+
+    return collateralUsd / (minted * ratio);
+  };
+
   return (
     <div className="flex flex-col min-h-screen w-full">
       <DepositDialog
@@ -541,14 +597,7 @@ export default function Home() {
                               hidden: !form.watch("collateral"),
                             })}
                           >
-                            ($
-                            {(
-                              Number(collateralValue) /
-                              10 ** 18
-                            ).toLocaleString(undefined, {
-                              maximumFractionDigits: 2,
-                            })}
-                            )
+                            (${parseBigInt(collateralValue as bigint, 18, 2)})
                           </span>
                         </span>
                       </FormLabel>
@@ -631,12 +680,7 @@ export default function Home() {
                             })}
                           >
                             (
-                            {(
-                              Number(synthAmountToBeMinted) /
-                              10 ** 18
-                            ).toLocaleString(undefined, {
-                              maximumFractionDigits: 2,
-                            })}{" "} ${form.getValues().mint.symbol})
+                            {parseBigInt(synthAmountToBeMinted as bigint, 18, 2)}{" "} ${form.getValues().mint?.symbol})
                           </span>
                         </span>
                       </FormLabel>
@@ -766,6 +810,7 @@ export default function Home() {
                   >
                     mWETH
                   </Button>
+                  <Button onClick={() => console.log(pricedPositions)}>click!</Button>
                 </div>
               </div>
               <CardFooter></CardFooter>
@@ -795,44 +840,58 @@ export default function Home() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow>
-                    <TableCell>
-                      <RussianRuble className="inline-block size-4" /> RUB
-                    </TableCell>
-                    <TableCell>5</TableCell>
-                    <TableCell>1.04 BTC</TableCell>
-                    <TableCell>$5.00</TableCell>
-                    <TableCell>$11.00</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="px-1">
-                            <EllipsisVertical className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                          <DropdownMenuItem
-                            onClick={() => setOpenDialog("deposit")}
-                          >
-                            <BanknoteArrowUp />
-                            Deposit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setOpenDialog("withdrawal")}
-                          >
-                            <BanknoteArrowDown />
-                            Withdrawal
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setOpenDialog("close-position")}
-                          >
-                            <BanknoteX />
-                            Close Position
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                  {
+                    pricedPositions ? pricedPositions
+                      .filter((position) => position.isActive)
+                      .map((position) => (
+                        <TableRow key={position.positionId}>
+                          <TableCell>
+                            {getAssetIcon(position.syntheticSymbol, "inline-block size-4")}
+                            {position.syntheticSymbol}
+                          </TableCell>
+                          <TableCell>{parseBigInt(position.mintedAmount, 18, 5)}</TableCell>
+                          <TableCell>{parseBigInt(position.collateralAmount, 8, 4)} {position.collateralSymbol} </TableCell>
+                          <TableCell>
+                            ${parseBigInt(position.mintedCurrentUsdValue as bigint, 18, 2)}
+                          </TableCell>
+                          <TableCell>
+                            ${
+                              calculateRatio(position)
+                            }
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="px-1">
+                                  <EllipsisVertical className="size-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem
+                                  onClick={() => setOpenDialog("deposit")}
+                                >
+                                  <BanknoteArrowUp />
+                                  Deposit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setOpenDialog("withdrawal")}
+                                >
+                                  <BanknoteArrowDown />
+                                  Withdrawal
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setOpenDialog("close-position")}
+                                >
+                                  <BanknoteX />
+                                  Close Position
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      )
+
+                      ) : (<TableRow>No Positions</TableRow>)}
                 </TableBody>
               </Table>
             )}
