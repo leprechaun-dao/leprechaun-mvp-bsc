@@ -47,7 +47,7 @@ import * as constants from "@/utils/constants";
 import { cn } from "@/utils/css";
 import { parseBigInt } from "@/utils/web3";
 import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
-import { readContract } from "@wagmi/core";
+import { readContract, waitForTransactionReceipt } from "@wagmi/core";
 import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
 import {
   BanknoteArrowDown,
@@ -275,6 +275,9 @@ export default function Home() {
       },
     },
   });
+
+  // const approveTokenWriteContract =
+
   const { data: receipt, status } = useWaitForTransactionReceipt({
     // @ts-expect-error address is alread 0x${string}
     hash: txHash,
@@ -393,7 +396,7 @@ export default function Home() {
     }
 
     return minCollateralRatio;
-  }, [getMinCollateralRatioContract.data]);
+  }, [form, getMinCollateralRatioContract.data]);
 
   const cleanCollateralAmount = useMemo(() => {
     if (!collateralWatched || collateralAmountWatched == null) return null;
@@ -426,20 +429,27 @@ export default function Home() {
         break;
     }
 
-    return _allowance!.result as bigint;
+    const result = _allowance?.result as number | undefined;
+    if (!result) return null;
+
+    return BigInt(result);
   }, [collateralWatched, mUSDCAllowance, mWBTCAllowance, mWETHAllowance]);
 
   const handleSubmitMint = form.handleSubmit(async (data) => {
     if ((allowance || 0) < cleanCollateralAmount!) {
       const abi = constants.ERC20ABI;
       // approveTokens
-      await writeContractAsync({
+      const approvalTxHash = await writeContractAsync({
         abi,
         address: data.collateral.tokenAddress,
         functionName: "approve",
         args: [positionManagerAddress, cleanCollateralAmount],
       });
-      console.log("approved");
+
+      await waitForTransactionReceipt(wagmiConfig, {
+        hash: approvalTxHash,
+        confirmations: 3,
+      });
     } else {
       const abi = constants.PositionManagerABI;
 
