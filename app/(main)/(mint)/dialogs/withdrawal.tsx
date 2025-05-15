@@ -185,7 +185,6 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
 
       try {
         const decimals = props.collateral.decimals || 0;
-        const valueAsNumber = parseFloat(value);
         const withdrawAmount = parseUnits(value, decimals);
 
         // Ensure not trying to withdraw more than available

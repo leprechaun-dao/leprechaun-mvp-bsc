@@ -50,7 +50,6 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
     resolver: yupResolver(formSchema),
   });
   const [collateralValue, setCollateralValue] = useState<bigint | null>(null);
-  const [synthAmountToBeMinted, setSynthAmountToBeMinted] = useState<bigint | null>(null);
   const [newRatio, setNewRatio] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -119,7 +118,6 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
       // Reset form
       form.reset();
       setCollateralValue(null);
-      setSynthAmountToBeMinted(null);
       setNewRatio(null);
 
     } catch (error) {
@@ -141,7 +139,6 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
     async (value: number) => {
       if (!props.positionToCheck || !props.collateral || value <= 0) {
         setCollateralValue(null);
-        setSynthAmountToBeMinted(null);
         setNewRatio(null);
         return;
       }
@@ -181,7 +178,7 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
         <Form {...form}>
           <DialogTitle>Deposit Collateral</DialogTitle>
           <DialogDescription>
-            Add more collateral to increase your position's health ratio.
+            Add more collateral to increase your position&apos;s health ratio.
           </DialogDescription>
           <div className="text-sm space-y-2">
             <div>
