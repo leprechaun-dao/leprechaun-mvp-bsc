@@ -27,6 +27,15 @@ export const mUSDCAddress = "0x39510c9f9E577c65b9184582745117341e7bdD73";
 export const mWETHAddress = "0x95539ce7555F53dACF3a79Ff760C06e5B4e310c3";
 export const mWBTCAddress = "0x1DBf5683c73E0D0A0e20AfC76F924e08E95637F7";
 
+export const assetsImages: Record<string, string> = {
+  sDOW: "/assets/us.svg",
+  sXAU: "/assets/gold.svg",
+  sOIL: "/assets/oil.svg",
+  mWBTC: "https://s2.coinmarketcap.com/static/img/coins/64x64/1.png",
+  mWETH: "https://s2.coinmarketcap.com/static/img/coins/64x64/1027.png",
+  mUSDC: "https://s2.coinmarketcap.com/static/img/coins/64x64/3408.png",
+};
+
 export {
   ERC20ABI,
   LeprechaunFactoryABI,

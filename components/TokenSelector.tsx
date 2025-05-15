@@ -1,4 +1,7 @@
+import { assetsImages } from "@/utils/constants";
+import { parseBigInt } from "@/utils/web3";
 import { SyntheticAssetInfo } from "@/utils/web3/interfaces";
+import Image from "next/image";
 import {
   Command,
   CommandEmpty,
@@ -6,7 +9,6 @@ import {
   CommandItem,
   CommandList,
 } from "./ui/command";
-import { parseBigInt } from "@/utils/web3";
 
 export const TokenSelector = ({
   tokens,
@@ -30,9 +32,20 @@ export const TokenSelector = ({
               onSelect?.(token);
             }}
           >
-            <span>{token.icon}</span>
+            <Image
+              src={assetsImages[token.symbol || ""]}
+              alt={`${token.symbol} Icon`}
+              className="rounded-full"
+              width={16}
+              height={16}
+            />
+            <span>{token.symbol} - </span>
             <span>{token.name}</span>
-            {token.balance && <span>{parseBigInt(token.balance, token.decimals as number, 4)}</span>}
+            {token.balance && (
+              <span>
+                {parseBigInt(token.balance, token.decimals as number, 4)}
+              </span>
+            )}
           </CommandItem>
         ))}
       </CommandList>

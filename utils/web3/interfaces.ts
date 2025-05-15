@@ -1,6 +1,3 @@
-import { BigIntStatsListener } from "fs";
-import { ReactNode } from "react";
-
 export interface SyntheticAssetInfo {
   tokenAddress: string;
   name: string;
@@ -15,7 +12,6 @@ export interface SyntheticAssetInfo {
   value?: bigint;
   assetID?: string;
   label?: string;
-  icon?: ReactNode;
 }
 
 export interface PositionDetails {

@@ -47,7 +47,7 @@ import * as constants from "@/utils/constants";
 import { cn } from "@/utils/css";
 import { parseBigInt } from "@/utils/web3";
 import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
-import { readContract } from "@wagmi/core";
+import { readContract, waitForTransactionReceipt } from "@wagmi/core";
 import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
 import {
   BanknoteArrowDown,
@@ -56,10 +56,6 @@ import {
   ChevronDown,
   EllipsisVertical,
   Loader2,
-  RussianRuble,
-  SaudiRiyal,
-  SwissFranc,
-  VaultIcon,
 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
@@ -70,9 +66,9 @@ import {
   useConnect,
   useReadContract,
   useReadContracts,
-  useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
+import { assetsImages } from "../../../utils/constants";
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog, PositionDialogProps } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
@@ -92,7 +88,14 @@ const TokenSelectorButton = ({
             Change Token
           </span>
           <span className="group-hover:hidden group-focus-visible:hidden flex items-center gap-1">
-            {selectedSymbol}
+            <Image
+              src={assetsImages[selectedSymbol]}
+              alt={`${selectedSymbol} Icon`}
+              className="rounded-full border-2 border-neutral-700"
+              width={16}
+              height={16}
+            />
+            <span className="leading-none">{selectedSymbol}</span>
             <ChevronDown className="size-3" />
           </span>
         </>
@@ -110,7 +113,6 @@ const collateralAssets: SyntheticAssetInfo[] = [
     symbol: "mWBTC",
     isActive: true,
     decimals: 8,
-    icon: <SwissFranc />,
   },
   {
     tokenAddress: constants.mWETHAddress,
@@ -118,7 +120,6 @@ const collateralAssets: SyntheticAssetInfo[] = [
     symbol: "mWETH",
     decimals: 18,
     isActive: true,
-    icon: <SaudiRiyal />,
   },
   {
     tokenAddress: constants.mUSDCAddress,
@@ -126,7 +127,6 @@ const collateralAssets: SyntheticAssetInfo[] = [
     symbol: "mUSDC",
     isActive: true,
     decimals: 6,
-    icon: <RussianRuble />,
   },
 ];
 
@@ -217,22 +217,6 @@ export default function Home() {
     mWBTCAllowance,
   ] = allowanceAndBalanceContract.data || [];
 
-  const getAssetIcon = (
-    sSymbol: string,
-    className: string,
-  ): React.ReactNode => {
-    switch (sSymbol) {
-      case "sOIL":
-        return <SwissFranc className={className} />;
-      case "sDOW":
-        return <RussianRuble className={className} />;
-      case "sXAU":
-        return <SaudiRiyal className={className} />;
-      default:
-        return <VaultIcon className={className} />;
-    }
-  };
-
   const formattedAssets = useMemo(() => {
     if (
       !syntheticAssetsContract.data ||
@@ -248,7 +232,6 @@ export default function Home() {
         minCollateralRatio: item.minCollateralRatio,
         auctionDiscount: item.auctionDiscount,
         isActive: item.isActive,
-        icon: getAssetIcon(item.name, "h-6 w-6") || <VaultIcon />,
       }),
     );
   }, [syntheticAssetsContract.data]);
@@ -279,23 +262,13 @@ export default function Home() {
 
   const [selectedPosition, setSelectedPosition] =
     useState<PositionDialogProps | null>(null);
-  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const { writeContract, writeContractAsync } = useWriteContract({
     mutation: {
-      onSuccess(data) {
-        setTxHash(data);
-      },
       onError(error) {
-        console.error("❌ Error en la tx:", error);
+        console.error("❌ Error on tx:", error);
         toast.error("Transaction failed! Please try again");
       },
     },
-  });
-  const { data: receipt, status } = useWaitForTransactionReceipt({
-    // @ts-expect-error address is alread 0x${string}
-    hash: txHash,
-    confirmations: 4,
-    enabled: !!txHash,
   });
 
   const [pricedPositions, setPricedPositions] = useState<
@@ -303,43 +276,6 @@ export default function Home() {
   >(null);
 
   useEffect(() => {
-    if (txHash && status === "pending") {
-      toast("Transaction sent.", {
-        action: {
-          label: "View on Basescan",
-          onClick: () => {
-            window.open(`https://basescan.io/tx/${txHash}`, "_blank");
-          },
-        },
-      });
-    }
-
-    if (status === "success") {
-      console.log("✅ Tx confirmed:", receipt);
-      // TODO handle approve and mint notifications
-      toast.success("Transaction confirmed.", {
-        action: {
-          label: (
-            <div className="flex gap-2 items-center">
-              <Image
-                src="/uniswap.svg"
-                alt="Uniswap Logo"
-                width={24}
-                height={24}
-              />
-              Pool on Uniswap
-            </div>
-          ),
-          onClick: () => {
-            window.open(`https://basescan.io/tx/${txHash}`, "_blank");
-          },
-        },
-      });
-
-      setTxHash(null);
-      // TODO if the tx is an approval tx, make allowance the same value as the collateralAmount
-    }
-
     if (openPositionsContractCall.status === "success") {
       const fetchPrices = async () => {
         const pPositions: PositionDetails[] = [];
@@ -368,13 +304,7 @@ export default function Home() {
 
       fetchPrices();
     }
-  }, [
-    status,
-    receipt,
-    txHash,
-    openPositionsContractCall.status,
-    openPositionsContractCall.data,
-  ]);
+  }, [openPositionsContractCall.status, openPositionsContractCall.data]);
 
   const collateralWatched = form.watch("collateral") as SyntheticAssetInfo;
   const collateralAmountWatched = form.watch("collateralAmount") as number;
@@ -409,7 +339,7 @@ export default function Home() {
     }
 
     return minCollateralRatio;
-  }, [getMinCollateralRatioContract.data]);
+  }, [form, getMinCollateralRatioContract.data]);
 
   const cleanCollateralAmount = useMemo(() => {
     if (!collateralWatched || collateralAmountWatched == null) return null;
@@ -442,25 +372,54 @@ export default function Home() {
         break;
     }
 
-    return _allowance!.result as bigint;
+    const result = _allowance?.result as number | undefined;
+    if (!result) return null;
+
+    return BigInt(result);
   }, [collateralWatched, mUSDCAllowance, mWBTCAllowance, mWETHAllowance]);
 
   const handleSubmitMint = form.handleSubmit(async (data) => {
     if ((allowance || 0) < cleanCollateralAmount!) {
       const abi = constants.ERC20ABI;
       // approveTokens
-      await writeContractAsync({
+      const approvalTxHash = await writeContractAsync({
         abi,
         address: data.collateral.tokenAddress,
         functionName: "approve",
         args: [positionManagerAddress, cleanCollateralAmount],
       });
-      console.log("approved");
+
+      toast("Transaction sent.", {
+        action: {
+          label: "View on Basescan",
+          onClick: () => {
+            window.open(`https://basescan.io/tx/${approvalTxHash}`, "_blank");
+          },
+        },
+      });
+
+      const approvalConfirmationTxHash = await waitForTransactionReceipt(
+        wagmiConfig,
+        {
+          hash: approvalTxHash,
+          confirmations: 3,
+        },
+      );
+      toast.success("Transaction confirmed.", {
+        action: {
+          label: "View on Basescan",
+          onClick: () => {
+            window.open(
+              `https://basescan.io/tx/${approvalConfirmationTxHash}`,
+              "_blank",
+            );
+          },
+        },
+      });
     } else {
       const abi = constants.PositionManagerABI;
 
-      // createPosition
-      await writeContractAsync({
+      const createPositionTxHash = await writeContractAsync({
         abi,
         address: positionManagerAddress,
         functionName: "createPosition",
@@ -472,6 +431,46 @@ export default function Home() {
           ),
           BigInt(Math.floor(data.mintAmount * 10 ** 18)),
         ],
+      });
+
+      toast("Transaction sent.", {
+        action: {
+          label: "View on Basescan",
+          onClick: () => {
+            window.open(
+              `https://basescan.io/tx/${createPositionTxHash}`,
+              "_blank",
+            );
+          },
+        },
+      });
+
+      const confirmationTxHash = await waitForTransactionReceipt(wagmiConfig, {
+        hash: createPositionTxHash,
+        confirmations: 3,
+      });
+
+      toast.success("Transaction confirmed.", {
+        action: {
+          label: (
+            <div className="flex gap-2 items-center">
+              <Image
+                src="/uniswap.svg"
+                alt="Uniswap Logo"
+                width={24}
+                height={24}
+              />
+              Pool on Uniswap
+            </div>
+          ),
+          onClick: () => {
+            // TODO: Update this to Pool URL
+            window.open(
+              `https://basescan.io/tx/${confirmationTxHash}`,
+              "_blank",
+            );
+          },
+        },
       });
 
       await openPositionsContractCall.refetch();
@@ -869,16 +868,23 @@ export default function Home() {
                 <div className="flex flex-col w-full mt-2">
                   <Button
                     disabled={
-                      account.status !== "connected" || loadingMintedAmount
+                      account.status !== "connected" ||
+                      loadingMintedAmount ||
+                      form.formState.isSubmitting
                     }
                     onClick={handleSubmitMint}
                   >
-                    {collateralWatched &&
-                    allowance &&
-                    cleanCollateralAmount &&
-                    allowance >= cleanCollateralAmount
-                      ? "Mint"
-                      : "Approve"}
+                    {form.formState.isSubmitting && (
+                      <Loader2 className="animate-spin size-3" />
+                    )}
+                    <span>
+                      {collateralWatched &&
+                      allowance &&
+                      cleanCollateralAmount &&
+                      allowance >= cleanCollateralAmount
+                        ? "Mint"
+                        : "Approve"}
+                    </span>
                   </Button>
                   <div className="grid grid-cols-3 gap-2 mt-2">
                     <Button
@@ -944,106 +950,127 @@ export default function Home() {
                       .filter((position) => position.isActive)
                       .map((position) => (
                         <TableRow key={position.positionId}>
-  <TableCell>
-    {getAssetIcon(position.syntheticSymbol, "inline-block size-4")}
-    {position.syntheticSymbol}
-  </TableCell>
-  <TableCell>{parseBigInt(position.mintedAmount, 18, 5)}</TableCell>
-  <TableCell>
+<TableCell>
+  <div className="flex items-center gap-1">
+    <Image
+      src={assetsImages[position.syntheticSymbol]}
+      alt={`${position.syntheticSymbol} Icon`}
+      className="rounded-full"
+      width={16}
+      height={16}
+    />
+    <span className="leading-none">
+      {position.syntheticSymbol}
+    </span>
+  </div>
+</TableCell>
+<TableCell>
+  {parseBigInt(position.mintedAmount, 18, 3)}
+</TableCell>
+<TableCell>
+  <div className="flex items-center gap-1">
+    <Image
+      src={assetsImages[position.collateralSymbol || ""]}
+      alt={`${position.collateralSymbol} Icon`}
+      className="rounded-full"
+      width={16}
+      height={16}
+    />
     {parseBigInt(
       position.collateralAmount,
       getDecimalsPerCollateralSymbol(position.collateralSymbol),
-      4
-    )}{" "}
-    {position.collateralSymbol}{" "}
-  </TableCell>
-  <TableCell>
-    {parseBigInt(position.currentRatio as bigint, 2, 2)}%
-  </TableCell>
-  <TableCell>
-    {parseBigInt(position.requiredRatio as bigint, 2, 2)}%
-  </TableCell>
-  <TableCell>
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="px-1">
-          <EllipsisVertical className="size-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuItem
-          onClick={() => {
-            setSelectedPosition({
-              positionToCheck: position,
-              collateral: collateralAssetsWithBalance.find(
-                (collateralAsset) =>
-                  collateralAsset.symbol === position.collateralSymbol
-              ),
-              allowance: getAllowanceForSymbol(position.collateralSymbol),
-              onSuccess: () => {
-                // Refresh user positions
-                openPositionsContractCall.refetch();
-                // Refresh allowances and balances
-                allowanceAndBalanceContract.refetch();
-              }
-            });
-            setOpenDialog("deposit");
-          }}
-        >
-          <BanknoteArrowUp className="mr-2 size-4"/>
-          Deposit
-        </DropdownMenuItem>
-        <DropdownMenuItem
-  onClick={() => {
-    // Log the position data to confirm it exists
-    console.log("Position data being set:", position);
-    
-    // Make sure all required fields are present
-    setSelectedPosition({
-      positionToCheck: position,
-      collateral: collateralAssetsWithBalance.find(
-        (collateralAsset) =>
-          collateralAsset.symbol === position.collateralSymbol
-      ),
-      // Make sure to pass allowance here too, even if it's for withdraw
-      allowance: getAllowanceForSymbol(position.collateralSymbol),
-      onSuccess: () => {
-        // Refresh user positions
-        openPositionsContractCall.refetch();
-        // Refresh allowances and balances
-        allowanceAndBalanceContract.refetch();
-      }
-    });
-    setOpenDialog("withdrawal");
-  }}
->
-  <BanknoteArrowDown className="mr-2 size-4"/>
-  Withdraw
-</DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => {
-            setSelectedPosition({
-              positionToCheck: position,
-              collateral: collateralAssetsWithBalance.find(
-                (collateralAsset) =>
-                  collateralAsset.symbol === position.collateralSymbol
-              ),
-              onSuccess: () => {
-                // Refresh user positions
-                openPositionsContractCall.refetch();
-                // Refresh allowances and balances
-                allowanceAndBalanceContract.refetch();
-              }
-            });
-            setOpenDialog("close-position");
-          }}
-        >
-          <BanknoteX className="mr-2 size-4"/>
-          Close Position
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  </TableCell>
+      4,
+    )}
+  </div>
+</TableCell>
+<TableCell>
+  {parseBigInt(position.currentRatio as bigint, 2, 2)}%
+</TableCell>
+<TableCell>
+  {parseBigInt(position.requiredRatio as bigint, 2, 2)}%
+</TableCell>
+<TableCell>
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button variant="ghost" className="px-1">
+        <EllipsisVertical className="size-4" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent>
+      <DropdownMenuItem
+        onClick={() => {
+          console.log("Position data for deposit:", position);
+          setSelectedPosition({
+            positionToCheck: position,
+            collateral: collateralAssetsWithBalance.find(
+              (collateralAsset) =>
+                collateralAsset.symbol === position.collateralSymbol
+            ),
+            allowance: getAllowanceForSymbol(position.collateralSymbol),
+            onSuccess: () => {
+              // Refresh user positions
+              openPositionsContractCall.refetch();
+              // Refresh allowances and balances
+              allowanceAndBalanceContract.refetch();
+            }
+          });
+          setOpenDialog("deposit");
+        }}
+      >
+        <BanknoteArrowUp className="mr-2 size-4" />
+        Deposit
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        onClick={() => {
+          // Log the position data to confirm it exists
+          console.log("Position data for withdrawal:", position);
+          
+          setSelectedPosition({
+            positionToCheck: position,
+            collateral: collateralAssetsWithBalance.find(
+              (collateralAsset) =>
+                collateralAsset.symbol === position.collateralSymbol
+            ),
+            allowance: getAllowanceForSymbol(position.collateralSymbol),
+            onSuccess: () => {
+              // Refresh user positions
+              openPositionsContractCall.refetch();
+              // Refresh allowances and balances
+              allowanceAndBalanceContract.refetch();
+            }
+          });
+          setOpenDialog("withdrawal");
+        }}
+      >
+        <BanknoteArrowDown className="mr-2 size-4" />
+        Withdraw
+      </DropdownMenuItem>
+      <DropdownMenuItem
+        onClick={() => {
+          console.log("Position data for close:", position);
+          setSelectedPosition({
+            positionToCheck: position,
+            collateral: collateralAssetsWithBalance.find(
+              (collateralAsset) =>
+                collateralAsset.symbol === position.collateralSymbol
+            ),
+            allowance: getAllowanceForSymbol(position.collateralSymbol),
+            onSuccess: () => {
+              // Refresh user positions
+              openPositionsContractCall.refetch();
+              // Refresh allowances and balances
+              allowanceAndBalanceContract.refetch();
+            }
+          });
+          setOpenDialog("close-position");
+        }}
+      >
+        <BanknoteX className="mr-2 size-4" />
+        Close Position
+      </DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
+</TableCell>
 </TableRow>
                       ))
                   ) : (
