@@ -103,7 +103,7 @@ export const WithdrawalDialog = (props: DialogProps) => {
             )}
           />
           <div className="text-sm">
-            <span className="font-medium">New Liquidation Price:</span> $2.00
+            <span className="font-medium">New Ratio:</span> 1.6 <br/>
           </div>
           <DialogFooter>
             <DialogClose asChild>

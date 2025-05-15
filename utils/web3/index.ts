@@ -92,5 +92,6 @@ export async function bulkCallGetters(
 }
 
 export function parseBigInt(amount: bigint, targetDecimals: number, maximumDigits: number) {
-  return (Number(amount) / (10 * 10 ** targetDecimals)).toLocaleString(undefined, { maximumFractionDigits: maximumDigits })
+  return (Number(amount) / (10 ** targetDecimals))
+  .toLocaleString(undefined, { maximumFractionDigits: maximumDigits })
 }

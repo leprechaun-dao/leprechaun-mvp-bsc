@@ -81,12 +81,11 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
     form.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.open]);
-
   const handleCollateralAmountChange = useDebouncedCallback(
     async (value: number) => {
       const abi = constants.LeprechaunLensABI;
       const address = constants.LENSAddress;
-
+      // TODO check why this fails
       const inputAmount = BigInt(
         Math.floor(Number(value) * 10 ** (props.collateral?.decimals as number)),
       );
@@ -105,7 +104,7 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
       setCollateralValue(result[1]);
       setSynthAmountToBeMinted(result[0])
     },
-    [],
+    [props.collateral, props.positionToCheck],
     800,
   );
 
@@ -165,9 +164,7 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
             )}
           />
           <div className="text-sm">
-            <span className="font-medium">New Liquidation Price:</span> $2.00 <br/>
-            <span className="font-medium">Synthetics to be minted:</span>{" "}
-            {parseBigInt(synthAmountToBeMinted as bigint, 18, 2)}{" "} ${props.positionToCheck?.syntheticSymbol}
+            <span className="font-medium">New Ratio:</span> 1.6 <br/>
           </div>
           <DialogFooter>
             <DialogClose asChild>

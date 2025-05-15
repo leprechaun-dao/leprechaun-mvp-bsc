@@ -508,13 +508,26 @@ export default function Home() {
     800,
   );
 
-  const calculateRatio = (position: PositionDetails): number => {
+  const calculateLiquidationPrice = (position: PositionDetails): number => {
     const collateralUsd = Number(position.collateralUsdValue) / 1e18;
     const minted = Number(position.mintedAmount) / 1e18;
     const ratio = Number(position.requiredRatio) / 10000;
 
-    return collateralUsd / (minted * ratio);
+    return (collateralUsd / (minted * ratio));
   };
+
+  function getDecimalsPerCollateralSymbol(symbol: string): number {
+      switch (symbol) {
+      case "mUSDC":
+        return 6;
+      case "mWETH":
+        return 18;
+      case "mWBTC":
+        return 8;
+      default:
+        return 0;
+    }
+  }
 
   return (
     <div className="flex flex-col min-h-screen w-full">
@@ -846,13 +859,13 @@ export default function Home() {
                             {position.syntheticSymbol}
                           </TableCell>
                           <TableCell>{parseBigInt(position.mintedAmount, 18, 5)}</TableCell>
-                          <TableCell>{parseBigInt(position.collateralAmount, 8, 4)} {position.collateralSymbol} </TableCell>
+                          <TableCell>{parseBigInt(position.collateralAmount, getDecimalsPerCollateralSymbol(position.collateralSymbol), 4)} {position.collateralSymbol} </TableCell>
                           <TableCell>
-                            ${parseBigInt(position.mintedCurrentUsdValue as bigint, 17, 2)}
+                            ${parseBigInt(position.mintedCurrentUsdValue as bigint, 18, 2)}
                           </TableCell>
                           <TableCell>
                             ${
-                              calculateRatio(position)
+                              calculateLiquidationPrice(position).toLocaleString(undefined, { currency: "USD", maximumFractionDigits: 2})
                             }
                           </TableCell>
                           <TableCell>
@@ -865,7 +878,6 @@ export default function Home() {
                               <DropdownMenuContent>
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    setOpenDialog("deposit")
                                     setSelectedPosition(
                                       {
                                         positionToCheck: position,
@@ -874,6 +886,7 @@ export default function Home() {
                                         ),
                                         allowance: allowance
                                       })
+                                     setOpenDialog("deposit")
                                   }}
                                 >
                                   <BanknoteArrowUp />
@@ -897,7 +910,13 @@ export default function Home() {
                         </TableRow>
                       )
 
-                      ) : (<TableRow>No Positions</TableRow>)}
+                      ) : (
+                      <TableRow>
+                        <TableCell>
+                          No Positions
+                        </TableCell>
+                      </TableRow>
+                      )}
                 </TableBody>
               </Table>
             )}
