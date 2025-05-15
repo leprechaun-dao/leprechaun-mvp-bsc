@@ -595,6 +595,60 @@ export default function Home() {
     }
   }
 
+  // @ts-expect-error types dont matter here
+  async function addTokenToWallet(e) {
+    const buttonId = e.target.id;
+
+    let tokenAddress
+    let tokenSymbol
+    let decimals
+
+    switch (buttonId) {
+      case "mUSDC":
+        tokenAddress = "0x39510c9f9E577c65b9184582745117341e7bdD73"
+        tokenSymbol = "mUSDC"
+        decimals = 6
+
+        break;
+      case "mWETH":
+        tokenAddress = "0x95539ce7555F53dACF3a79Ff760C06e5B4e310c3"
+        tokenSymbol = "mWETH"
+        decimals = 18
+
+        break;
+      case "mWBTC":
+        tokenAddress = "0x1DBf5683c73E0D0A0e20AfC76F924e08E95637F7"
+        tokenSymbol = "mWBTC"
+        decimals = 8
+        break;
+      default:
+        break;
+    }
+
+    try {
+      const wasAdded = await (window).ethereum
+        .request({
+          method: "wallet_watchAsset",
+          params: {
+            type: "ERC20",
+            options: {
+              address: tokenAddress,
+              symbol: tokenSymbol,
+              decimals: decimals,
+            },
+          },
+        })
+
+      if (wasAdded) {
+        console.log("Thanks for your interest!")
+      } else {
+        console.log("Your loss!")
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen w-full">
       {/* @ts-expect-error we dont care about these issues rn */}
@@ -862,30 +916,66 @@ export default function Home() {
                     </span>
                   </Button>
                   <div className="grid grid-cols-3 gap-2 mt-2">
-                    <Button
-                      id="USDC"
-                      variant="secondary"
-                      disabled={account.status !== "connected"}
-                      onClick={mintMockCollateral}
-                    >
-                      mUSDC
-                    </Button>
-                    <Button
-                      id="wBTC"
-                      variant="secondary"
-                      disabled={account.status !== "connected"}
-                      onClick={mintMockCollateral}
-                    >
-                      mWBTC
-                    </Button>
-                    <Button
-                      id="wETH"
-                      variant="secondary"
-                      disabled={account.status !== "connected"}
-                      onClick={mintMockCollateral}
-                    >
-                      mWETH
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        id="USDC"
+                        variant="secondary"
+                        disabled={account.status !== "connected"}
+                        onClick={mintMockCollateral}
+                        className="w-36"
+                      >
+                        mUSDC
+                      </Button>
+                      <Button
+                        id="mUSDC"
+                        className="w-10"
+                        variant="secondary"
+                        disabled={account.status !== "connected"}
+                        onClick={addTokenToWallet}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        id="wETH"
+                        variant="secondary"
+                        disabled={account.status !== "connected"}
+                        onClick={mintMockCollateral}
+                        className="w-36"
+                      >
+                        mWETH
+                      </Button>
+                      <Button
+                        id="mWETH"
+                        className="w-10"
+                        variant="secondary"
+                        disabled={account.status !== "connected"}
+                        onClick={addTokenToWallet}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        id="wBTC"
+                        variant="secondary"
+                        disabled={account.status !== "connected"}
+                        onClick={mintMockCollateral}
+                        className="w-36"
+                      >
+                        mWBTC
+                      </Button>
+                      <Button
+                        id="mWBTC"
+                        className="w-10"
+                        variant="secondary"
+                        disabled={account.status !== "connected"}
+                        onClick={addTokenToWallet}
+                      >
+                        Add
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <CardFooter>
