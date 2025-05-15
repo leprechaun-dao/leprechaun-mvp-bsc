@@ -6,6 +6,7 @@ import {
   CommandItem,
   CommandList,
 } from "./ui/command";
+import { parseBigInt } from "@/utils/web3";
 
 export const TokenSelector = ({
   tokens,
@@ -31,7 +32,7 @@ export const TokenSelector = ({
           >
             <span>{token.icon}</span>
             <span>{token.name}</span>
-            {token.balance && <span>{token.balance.toString()}</span>}
+            {token.balance && <span>{parseBigInt(token.balance, token.decimals as number, 4)}</span>}
           </CommandItem>
         ))}
       </CommandList>

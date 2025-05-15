@@ -328,7 +328,7 @@ export default function Home() {
 
     if (openPositionsContractCall.status === "success") {
       const fetchPrices = async () => {
-        const pricedPositions: PositionDetails[] = [];
+        const pPositions: PositionDetails[] = [];
         const positions = openPositionsContractCall.data as PositionDetails[];
 
         const pricePromises = positions.map(position =>
@@ -343,13 +343,13 @@ export default function Home() {
         const prices = await Promise.all(pricePromises);
 
         for (let i = 0; i < positions.length; i++) {
-          pricedPositions.push({
+          pPositions.push({
             ...positions[i],
             mintedCurrentUsdValue: (prices[i] as bigint[])[0]
           });
         }
 
-        setPricedPositions(pricedPositions);
+        setPricedPositions(pPositions);
       };
 
         fetchPrices();
@@ -810,7 +810,6 @@ export default function Home() {
                   >
                     mWETH
                   </Button>
-                  <Button onClick={() => console.log(pricedPositions)}>click!</Button>
                 </div>
               </div>
               <CardFooter></CardFooter>
@@ -852,7 +851,7 @@ export default function Home() {
                           <TableCell>{parseBigInt(position.mintedAmount, 18, 5)}</TableCell>
                           <TableCell>{parseBigInt(position.collateralAmount, 8, 4)} {position.collateralSymbol} </TableCell>
                           <TableCell>
-                            ${parseBigInt(position.mintedCurrentUsdValue as bigint, 18, 2)}
+                            ${parseBigInt(position.mintedCurrentUsdValue as bigint, 17, 2)}
                           </TableCell>
                           <TableCell>
                             ${
