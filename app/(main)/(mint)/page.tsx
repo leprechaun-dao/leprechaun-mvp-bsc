@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/table";
 import * as constants from "@/utils/constants";
 import { cn } from "@/utils/css";
+import { parseBigInt } from "@/utils/web3";
 import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { readContract } from "@wagmi/core";
 import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
@@ -73,7 +74,6 @@ import {
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog, PositionDialogProps } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
-import { parseBigInt } from "@/utils/web3";
 
 const TokenSelectorButton = ({
   selectedSymbol,
@@ -161,8 +161,8 @@ export default function Home() {
     functionName: "getUserPositions",
     args: [account.address],
     query: {
-      enabled: !!account.address
-    }
+      enabled: !!account.address,
+    },
   });
 
   const allowanceAndBalanceContract = useReadContracts({
@@ -211,13 +211,16 @@ export default function Home() {
     mWBTCAllowance,
   ] = allowanceAndBalanceContract.data || [];
 
-  const getAssetIcon = (sSymbol: string, className: string): React.ReactNode => {
+  const getAssetIcon = (
+    sSymbol: string,
+    className: string,
+  ): React.ReactNode => {
     switch (sSymbol) {
-      case 'sOIL':
+      case "sOIL":
         return <SwissFranc className={className} />;
-      case 'sDOW':
+      case "sDOW":
         return <RussianRuble className={className} />;
-      case 'sXAU':
+      case "sXAU":
         return <SaudiRiyal className={className} />;
       default:
         return <VaultIcon className={className} />;
@@ -267,7 +270,8 @@ export default function Home() {
   const [openDialog, setOpenDialog] = useState<
     "deposit" | "withdrawal" | "close-position" | null
   >(null);
-  const [selectedPosition, setSelectedPosition] = useState<PositionDialogProps | null>(null);
+  const [selectedPosition, setSelectedPosition] =
+    useState<PositionDialogProps | null>(null);
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const { writeContract, writeContractAsync } = useWriteContract({
     mutation: {
@@ -287,7 +291,9 @@ export default function Home() {
     enabled: !!txHash,
   });
 
-  const [pricedPositions, setPricedPositions] = useState<PositionDetails[]|null>(null)
+  const [pricedPositions, setPricedPositions] = useState<
+    PositionDetails[] | null
+  >(null);
 
   useEffect(() => {
     if (txHash && status === "pending") {
@@ -332,13 +338,13 @@ export default function Home() {
         const pPositions: PositionDetails[] = [];
         const positions = openPositionsContractCall.data as PositionDetails[];
 
-        const pricePromises = positions.map(position =>
+        const pricePromises = positions.map((position) =>
           readContract(wagmiConfig, {
             abi: constants.OracleInterfaceABI,
             address: constants.OracleInterfaceAddress,
             functionName: "getNormalizedPrice",
             args: [position.syntheticAsset],
-          })
+          }),
         );
 
         const prices = await Promise.all(pricePromises);
@@ -346,16 +352,22 @@ export default function Home() {
         for (let i = 0; i < positions.length; i++) {
           pPositions.push({
             ...positions[i],
-            mintedCurrentUsdValue: (prices[i] as bigint[])[0]
+            mintedCurrentUsdValue: (prices[i] as bigint[])[0],
           });
         }
 
         setPricedPositions(pPositions);
       };
 
-        fetchPrices();
-      }
-  }, [status, receipt, txHash, openPositionsContractCall.status, openPositionsContractCall.data]);
+      fetchPrices();
+    }
+  }, [
+    status,
+    receipt,
+    txHash,
+    openPositionsContractCall.status,
+    openPositionsContractCall.data,
+  ]);
 
   const collateralWatched = form.watch("collateral");
   const collateralAmountWatched = form.watch("collateralAmount");
@@ -426,7 +438,7 @@ export default function Home() {
         ],
       });
 
-      await openPositionsContractCall.refetch()
+      await openPositionsContractCall.refetch();
     }
 
     await allowanceAndBalanceContract.refetch();
@@ -468,7 +480,9 @@ export default function Home() {
   }
 
   const [collateralValue, setCollateralValue] = useState<bigint | null>(null);
-  const [synthAmountToBeMinted, setSynthAmountToBeMinted] = useState<bigint | null>(null);
+  const [synthAmountToBeMinted, setSynthAmountToBeMinted] = useState<
+    bigint | null
+  >(null);
 
   const handleCollateralAmountChange = useDebouncedCallback(
     async (value: number) => {
@@ -481,7 +495,7 @@ export default function Home() {
       if (!mint || !collateral) return;
 
       const asset = collateralAssetsWithBalance.find(
-        (collateralAsset) => collateralAsset.symbol === collateral?.symbol
+        (collateralAsset) => collateralAsset.symbol === collateral?.symbol,
       );
       const inputAmount = BigInt(
         Math.floor(Number(value) * 10 ** (asset?.decimals as number)),
@@ -499,7 +513,7 @@ export default function Home() {
       const newAmount = Number(result[0]) / 10 ** 18;
 
       setCollateralValue(result[1]);
-      setSynthAmountToBeMinted(result[0])
+      setSynthAmountToBeMinted(result[0]);
       form.setValue("mintAmount", newAmount, {
         shouldValidate: true,
       });
@@ -513,11 +527,11 @@ export default function Home() {
     const minted = Number(position.mintedAmount) / 1e18;
     const ratio = Number(position.requiredRatio) / 10000;
 
-    return (collateralUsd / (minted * ratio));
+    return collateralUsd / (minted * ratio);
   };
 
   function getDecimalsPerCollateralSymbol(symbol: string): number {
-      switch (symbol) {
+    switch (symbol) {
       case "mUSDC":
         return 6;
       case "mWETH":
@@ -582,11 +596,14 @@ export default function Home() {
                         const collateral = form.getValues().collateral;
 
                         const asset = collateralAssetsWithBalance.find(
-                          (collateralAsset) => collateralAsset.symbol === collateral?.symbol
+                          (collateralAsset) =>
+                            collateralAsset.symbol === collateral?.symbol,
                         );
 
                         const inputAmount = BigInt(
-                          Math.floor(Number(value) * 10 ** (asset?.decimals as number)),
+                          Math.floor(
+                            Number(value) * 10 ** (asset?.decimals as number),
+                          ),
                         );
                         const assetBalance = asset?.balance as bigint;
 
@@ -637,6 +654,7 @@ export default function Home() {
                             >
                               <DialogTrigger asChild>
                                 <TokenSelectorButton
+                                  disabled={account.status !== "connected"}
                                   className="h-14"
                                   selectedSymbol={field.value?.symbol}
                                 />
@@ -690,7 +708,12 @@ export default function Home() {
                             })}
                           >
                             (
-                            {parseBigInt(synthAmountToBeMinted as bigint, 18, 2)}{" "} ${form.getValues().mint?.symbol})
+                            {parseBigInt(
+                              synthAmountToBeMinted as bigint,
+                              18,
+                              2,
+                            )}{" "}
+                            ${form.getValues().mint?.symbol})
                           </span>
                         </span>
                       </FormLabel>
@@ -711,6 +734,7 @@ export default function Home() {
                             >
                               <DialogTrigger asChild>
                                 <TokenSelectorButton
+                                  disabled={account.status !== "connected"}
                                   className="h-14"
                                   selectedSymbol={field.value?.symbol}
                                 />
@@ -789,9 +813,9 @@ export default function Home() {
                   onClick={handleSubmitMint}
                 >
                   {collateralWatched &&
-                    allowance &&
-                    cleanCollateralAmount &&
-                    allowance >= cleanCollateralAmount
+                  allowance &&
+                  cleanCollateralAmount &&
+                  allowance >= cleanCollateralAmount
                     ? "Mint"
                     : "Approve"}
                 </Button>
@@ -850,28 +874,47 @@ export default function Home() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {
-                    pricedPositions ? pricedPositions
+                  {pricedPositions ? (
+                    pricedPositions
                       .filter((position) => position.isActive)
                       .map((position) => (
                         <TableRow key={position.positionId}>
                           <TableCell>
-                            {getAssetIcon(position.syntheticSymbol, "inline-block size-4")}
+                            {getAssetIcon(
+                              position.syntheticSymbol,
+                              "inline-block size-4",
+                            )}
                             {position.syntheticSymbol}
                           </TableCell>
-                          <TableCell>{parseBigInt(position.mintedAmount, 18, 5)}</TableCell>
-                          <TableCell>{parseBigInt(position.collateralAmount, getDecimalsPerCollateralSymbol(position.collateralSymbol), 4)} {position.collateralSymbol} </TableCell>
                           <TableCell>
-                            ${parseBigInt(position.mintedCurrentUsdValue as bigint, 18, 2)}
+                            {parseBigInt(position.mintedAmount, 18, 5)}
                           </TableCell>
                           <TableCell>
-                            ${
-                              calculateLiquidationPrice(position).toLocaleString(undefined, { currency: "USD", maximumFractionDigits: 2})
-                            }
+                            {parseBigInt(
+                              position.collateralAmount,
+                              getDecimalsPerCollateralSymbol(
+                                position.collateralSymbol,
+                              ),
+                              4,
+                            )}{" "}
+                            {position.collateralSymbol}{" "}
                           </TableCell>
                           <TableCell>
-                            %RATIO
+                            $
+                            {parseBigInt(
+                              position.mintedCurrentUsdValue as bigint,
+                              18,
+                              2,
+                            )}
                           </TableCell>
+                          <TableCell>
+                            $
+                            {calculateLiquidationPrice(position).toLocaleString(
+                              undefined,
+                              { currency: "USD", maximumFractionDigits: 2 },
+                            )}
+                          </TableCell>
+                          <TableCell>%RATIO</TableCell>
                           <TableCell>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -882,15 +925,17 @@ export default function Home() {
                               <DropdownMenuContent>
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    setSelectedPosition(
-                                      {
-                                        positionToCheck: position,
-                                        collateral: collateralAssetsWithBalance.find(
-                                          (collateralAsset) => collateralAsset.symbol === position.collateralSymbol
+                                    setSelectedPosition({
+                                      positionToCheck: position,
+                                      collateral:
+                                        collateralAssetsWithBalance.find(
+                                          (collateralAsset) =>
+                                            collateralAsset.symbol ===
+                                            position.collateralSymbol,
                                         ),
-                                        allowance: allowance
-                                      })
-                                     setOpenDialog("deposit")
+                                      allowance: allowance,
+                                    });
+                                    setOpenDialog("deposit");
                                   }}
                                 >
                                   <BanknoteArrowUp />
@@ -903,7 +948,9 @@ export default function Home() {
                                   Withdrawal
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => setOpenDialog("close-position")}
+                                  onClick={() =>
+                                    setOpenDialog("close-position")
+                                  }
                                 >
                                   <BanknoteX />
                                   Close Position
@@ -912,37 +959,34 @@ export default function Home() {
                             </DropdownMenu>
                           </TableCell>
                         </TableRow>
-                      )
-
-                      ) : (
-                      <TableRow>
-                        <TableCell>
-                          No Positions
-                        </TableCell>
-                      </TableRow>
-                      )}
+                      ))
+                  ) : (
+                    <TableRow>
+                      <TableCell>No Positions</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             )}
             {(account.status === "disconnected" ||
               account.status === "connecting") && (
-                <p>
-                  Connect your wallet to see your positions. If you don&apos;t
-                  have a wallet, you can create one using MetaMask.
-                </p>
-              )}
+              <p>
+                Connect your wallet to see your positions. If you don&apos;t
+                have a wallet, you can create one using MetaMask.
+              </p>
+            )}
           </CardContent>
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
-              <CardFooter>
-                <Button
-                  className="w-full"
-                  onClick={() => connect({ connector: connectors[0] })}
-                >
-                  Connect
-                </Button>
-              </CardFooter>
-            )}
+            <CardFooter>
+              <Button
+                className="w-full"
+                onClick={() => connect({ connector: connectors[0] })}
+              >
+                Connect
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       </main>
     </div>
