@@ -453,8 +453,7 @@ export default function Home() {
     } else {
       const abi = constants.PositionManagerABI;
 
-      // createPosition
-      await writeContractAsync({
+      const createPositionTxHash = await writeContractAsync({
         abi,
         address: positionManagerAddress,
         functionName: "createPosition",
@@ -466,6 +465,11 @@ export default function Home() {
           ),
           BigInt(Math.floor(data.mintAmount * 10 ** 18)),
         ],
+      });
+
+      await waitForTransactionReceipt(wagmiConfig, {
+        hash: createPositionTxHash,
+        confirmations: 3,
       });
 
       await openPositionsContractCall.refetch();
@@ -853,16 +857,23 @@ export default function Home() {
                 <div className="flex flex-col w-full mt-2">
                   <Button
                     disabled={
-                      account.status !== "connected" || loadingMintedAmount
+                      account.status !== "connected" ||
+                      loadingMintedAmount ||
+                      form.formState.isSubmitting
                     }
                     onClick={handleSubmitMint}
                   >
-                    {collateralWatched &&
-                    allowance &&
-                    cleanCollateralAmount &&
-                    allowance >= cleanCollateralAmount
-                      ? "Mint"
-                      : "Approve"}
+                    {form.formState.isSubmitting && (
+                      <Loader2 className="animate-spin size-3" />
+                    )}
+                    <span>
+                      {collateralWatched &&
+                      allowance &&
+                      cleanCollateralAmount &&
+                      allowance >= cleanCollateralAmount
+                        ? "Mint"
+                        : "Approve"}
+                    </span>
                   </Button>
                   <div className="grid grid-cols-3 gap-2 mt-2">
                     <Button
