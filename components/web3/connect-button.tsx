@@ -15,7 +15,7 @@ export const ConnectButton = () => {
     } else {
       connect({ connector: connectors[0] });
     }
-  }, [account.status, connect, disconnect]);
+  }, [account.status, connectors, connect, disconnect]);
 
   const commonProps = useMemo(
     (): ButtonProps => ({
