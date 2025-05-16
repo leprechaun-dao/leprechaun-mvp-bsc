@@ -1,7 +1,7 @@
 import { cn } from "@/utils/css";
 import Image from "next/image";
 import Link from "next/link";
-import { ConnectKitButton } from "connectkit";
+import { CustomConnectButton } from "./connect-button";
 
 const routes = {
   mint: {
@@ -46,7 +46,10 @@ export const Header = ({
         ))}
       </div>
 
-      <div className="ml-auto"> <ConnectKitButton /></div>
+      <div className="ml-auto">
+        {" "}
+        <CustomConnectButton />
+      </div>
     </header>
   );
 };

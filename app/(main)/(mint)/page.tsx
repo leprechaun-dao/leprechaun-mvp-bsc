@@ -1,6 +1,7 @@
 "use client";
 import { wagmiConfig } from "@/app/wagmiConfig";
 import { DecimalInput } from "@/components/DecimalInput";
+import { CustomConnectButton } from "@/components/layout/connect-button";
 import { Header } from "@/components/layout/header";
 import { TokenSelector } from "@/components/TokenSelector";
 import { Button, ButtonProps } from "@/components/ui/button";
@@ -70,9 +71,8 @@ import {
 import { assetsImages } from "../../../utils/constants";
 import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog, PositionDialogProps } from "./dialogs/deposit";
-import { WithdrawalDialog } from "./dialogs/withdrawal";
 import { sendTxSentToast, sendTxSuccessToast } from "./dialogs/toasts";
-import { ConnectKitButton } from "connectkit";
+import { WithdrawalDialog } from "./dialogs/withdrawal";
 
 const TokenSelectorButton = ({
   selectedSymbol,
@@ -384,7 +384,7 @@ export default function Home() {
         args: [positionManagerAddress, cleanCollateralAmount],
       });
 
-      sendTxSentToast(approvalTxHash)
+      sendTxSentToast(approvalTxHash);
 
       const approvalConfirmationTxHash = await waitForTransactionReceipt(
         wagmiConfig,
@@ -394,7 +394,7 @@ export default function Home() {
         },
       );
 
-      sendTxSuccessToast(approvalConfirmationTxHash.transactionHash)
+      sendTxSuccessToast(approvalConfirmationTxHash.transactionHash);
     } else {
       const abi = constants.PositionManagerABI;
 
@@ -412,7 +412,7 @@ export default function Home() {
         ],
       });
 
-      sendTxSentToast(createPositionTxHash)
+      sendTxSentToast(createPositionTxHash);
 
       const confirmationTx = await waitForTransactionReceipt(wagmiConfig, {
         hash: createPositionTxHash,
@@ -593,27 +593,27 @@ export default function Home() {
   async function addTokenToWallet(e) {
     const buttonId = e.target.id;
 
-    let tokenAddress
-    let tokenSymbol
-    let decimals
+    let tokenAddress;
+    let tokenSymbol;
+    let decimals;
 
     switch (buttonId) {
       case "mUSDC":
-        tokenAddress = "0x39510c9f9E577c65b9184582745117341e7bdD73"
-        tokenSymbol = "mUSDC"
-        decimals = 6
+        tokenAddress = "0x39510c9f9E577c65b9184582745117341e7bdD73";
+        tokenSymbol = "mUSDC";
+        decimals = 6;
 
         break;
       case "mWETH":
-        tokenAddress = "0x95539ce7555F53dACF3a79Ff760C06e5B4e310c3"
-        tokenSymbol = "mWETH"
-        decimals = 18
+        tokenAddress = "0x95539ce7555F53dACF3a79Ff760C06e5B4e310c3";
+        tokenSymbol = "mWETH";
+        decimals = 18;
 
         break;
       case "mWBTC":
-        tokenAddress = "0x1DBf5683c73E0D0A0e20AfC76F924e08E95637F7"
-        tokenSymbol = "mWBTC"
-        decimals = 8
+        tokenAddress = "0x1DBf5683c73E0D0A0e20AfC76F924e08E95637F7";
+        tokenSymbol = "mWBTC";
+        decimals = 8;
         break;
       default:
         break;
@@ -621,26 +621,25 @@ export default function Home() {
 
     try {
       // eslint-disable-next-line  @typescript-eslint/no-explicit-any
-      const wasAdded = await (window as any).ethereum
-        .request({
-          method: "wallet_watchAsset",
-          params: {
-            type: "ERC20",
-            options: {
-              address: tokenAddress,
-              symbol: tokenSymbol,
-              decimals: decimals,
-            },
+      const wasAdded = await (window as any).ethereum.request({
+        method: "wallet_watchAsset",
+        params: {
+          type: "ERC20",
+          options: {
+            address: tokenAddress,
+            symbol: tokenSymbol,
+            decimals: decimals,
           },
-        })
+        },
+      });
 
       if (wasAdded) {
-        console.log("Thanks for your interest!")
+        console.log("Thanks for your interest!");
       } else {
-        console.log("Your loss!")
+        console.log("Your loss!");
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
   }
 
@@ -650,19 +649,25 @@ export default function Home() {
       <DepositDialog
         {...selectedPosition}
         open={openDialog === "deposit"}
-        onOpenChange={(v) => v ? setOpenDialog("deposit") : setOpenDialog(null)}
+        onOpenChange={(v) =>
+          v ? setOpenDialog("deposit") : setOpenDialog(null)
+        }
       />
       {/* @ts-expect-error we dont care about these issues rn */}
       <WithdrawalDialog
         {...selectedPosition}
         open={openDialog === "withdrawal"}
-        onOpenChange={(v) => v ? setOpenDialog("withdrawal") : setOpenDialog(null)}
+        onOpenChange={(v) =>
+          v ? setOpenDialog("withdrawal") : setOpenDialog(null)
+        }
       />
       {/* @ts-expect-error we dont care about these issues rn */}
       <ClosePositionDialog
         {...selectedPosition}
         open={openDialog === "close-position"}
-        onOpenChange={(v) => v ? setOpenDialog("close-position") : setOpenDialog(null)}
+        onOpenChange={(v) =>
+          v ? setOpenDialog("close-position") : setOpenDialog(null)
+        }
       />
 
       <Header activeRoute="mint" />
@@ -1071,17 +1076,21 @@ export default function Home() {
                                   onClick={() => {
                                     setSelectedPosition({
                                       positionToCheck: position,
-                                      collateral: collateralAssetsWithBalance.find(
-                                        (collateralAsset) =>
-                                          collateralAsset.symbol === position.collateralSymbol
+                                      collateral:
+                                        collateralAssetsWithBalance.find(
+                                          (collateralAsset) =>
+                                            collateralAsset.symbol ===
+                                            position.collateralSymbol,
+                                        ),
+                                      allowance: getAllowanceForSymbol(
+                                        position.collateralSymbol,
                                       ),
-                                      allowance: getAllowanceForSymbol(position.collateralSymbol),
                                       onSuccess: () => {
                                         // Refresh user positions
                                         openPositionsContractCall.refetch();
                                         // Refresh allowances and balances
                                         allowanceAndBalanceContract.refetch();
-                                      }
+                                      },
                                     });
                                     setOpenDialog("deposit");
                                   }}
@@ -1092,21 +1101,28 @@ export default function Home() {
                                 <DropdownMenuItem
                                   onClick={() => {
                                     // Log the position data to confirm it exists
-                                    console.log("Position data for withdrawal:", position);
+                                    console.log(
+                                      "Position data for withdrawal:",
+                                      position,
+                                    );
 
                                     setSelectedPosition({
                                       positionToCheck: position,
-                                      collateral: collateralAssetsWithBalance.find(
-                                        (collateralAsset) =>
-                                          collateralAsset.symbol === position.collateralSymbol
+                                      collateral:
+                                        collateralAssetsWithBalance.find(
+                                          (collateralAsset) =>
+                                            collateralAsset.symbol ===
+                                            position.collateralSymbol,
+                                        ),
+                                      allowance: getAllowanceForSymbol(
+                                        position.collateralSymbol,
                                       ),
-                                      allowance: getAllowanceForSymbol(position.collateralSymbol),
                                       onSuccess: () => {
                                         // Refresh user positions
                                         openPositionsContractCall.refetch();
                                         // Refresh allowances and balances
                                         allowanceAndBalanceContract.refetch();
-                                      }
+                                      },
                                     });
                                     setOpenDialog("withdrawal");
                                   }}
@@ -1116,20 +1132,27 @@ export default function Home() {
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    console.log("Position data for close:", position);
+                                    console.log(
+                                      "Position data for close:",
+                                      position,
+                                    );
                                     setSelectedPosition({
                                       positionToCheck: position,
-                                      collateral: collateralAssetsWithBalance.find(
-                                        (collateralAsset) =>
-                                          collateralAsset.symbol === position.collateralSymbol
+                                      collateral:
+                                        collateralAssetsWithBalance.find(
+                                          (collateralAsset) =>
+                                            collateralAsset.symbol ===
+                                            position.collateralSymbol,
+                                        ),
+                                      allowance: getAllowanceForSymbol(
+                                        position.collateralSymbol,
                                       ),
-                                      allowance: getAllowanceForSymbol(position.collateralSymbol),
                                       onSuccess: () => {
                                         // Refresh user positions
                                         openPositionsContractCall.refetch();
                                         // Refresh allowances and balances
                                         allowanceAndBalanceContract.refetch();
-                                      }
+                                      },
                                     });
                                     setOpenDialog("close-position");
                                   }}
@@ -1161,9 +1184,7 @@ export default function Home() {
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
             <CardFooter>
-              <div className="mx-auto">
-                <ConnectKitButton />
-              </div>
+              <CustomConnectButton className="w-full" />
             </CardFooter>
           )}
         </Card>
