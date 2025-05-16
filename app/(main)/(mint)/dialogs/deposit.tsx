@@ -1,3 +1,4 @@
+import { wagmiConfig } from "@/app/wagmiConfig";
 import { DecimalInput } from "@/components/DecimalInput";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,29 +17,31 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import * as constants from "@/utils/constants";
+import { parseBigInt } from "@/utils/web3";
 import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { DialogProps } from "@radix-ui/react-dialog";
+import { readContract } from "@wagmi/core";
+import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
 import { Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { readContract } from "@wagmi/core";
-import * as constants from "@/utils/constants";
-import { parseBigInt } from "@/utils/web3";
-import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
-import {wagmiConfig} from "@/app/wagmiConfig"
 import { toast } from "sonner";
 
 export interface PositionDialogProps extends DialogProps {
-  positionToCheck: PositionDetails | undefined
-  collateral: SyntheticAssetInfo | undefined
-  allowance: bigint | null
+  positionToCheck: PositionDetails | undefined;
+  collateral: SyntheticAssetInfo | undefined;
+  allowance: bigint | null;
 }
 
 export const DepositDialog = ({ ...props }: PositionDialogProps) => {
   const form = useForm();
   const [collateralValue, setCollateralValue] = useState<bigint | null>(null);
-  const [synthAmountToBeMinted, setSynthAmountToBeMinted] = useState<bigint | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [synthAmountToBeMinted, setSynthAmountToBeMinted] = useState<
+    bigint | null
+  >(null);
 
   const handleSubmit = form.handleSubmit(async (data) => {
     console.log(data);
@@ -87,14 +90,20 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
       const address = constants.LENSAddress;
       // TODO check why this fails
       const inputAmount = BigInt(
-        Math.floor(Number(value) * 10 ** (props.collateral?.decimals as number)),
+        Math.floor(
+          Number(value) * 10 ** (props.collateral?.decimals as number),
+        ),
       );
 
       const res = await readContract(wagmiConfig, {
         abi,
         address: address,
         functionName: "getMintableAmount",
-        args: [props.positionToCheck?.syntheticAsset, props.collateral?.tokenAddress, inputAmount],
+        args: [
+          props.positionToCheck?.syntheticAsset,
+          props.collateral?.tokenAddress,
+          inputAmount,
+        ],
       });
 
       const result = res as bigint[];
@@ -102,7 +111,7 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
       // const newAmount = Number(result[0]) / 10 ** 18;
 
       setCollateralValue(result[1]);
-      setSynthAmountToBeMinted(result[0])
+      setSynthAmountToBeMinted(result[0]);
     },
     [props.collateral, props.positionToCheck],
     800,
@@ -117,39 +126,42 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
             Enter the amount of tokens you want to deposit.
           </DialogDescription>
           <div className="text-sm">
-            <span className="font-medium">Collateral:</span> {props.positionToCheck?.collateralSymbol}
+            <span className="font-medium">Collateral:</span>{" "}
+            {props.positionToCheck?.collateralSymbol}
           </div>
           <FormField
             control={form.control}
             name="amount"
             rules={{
               required: "Amount is required",
-                validate: {
-                  isNumber: (value) => {
-                    return (
-                      typeof value === "number" || "Amount must be a number"
-                    );
-                  },
-                  isPositive: (value) => {
-                    return value > 0 || "Amount must be greater than 0";
-                  },
-                  withinBalance: (value) => {
-                    const collateral = props.collateral;
-                    const inputAmount = BigInt(
-                      Math.floor(Number(value) * 10 ** (collateral?.decimals as number)),
-                    );
-                    const assetBalance = collateral?.balance;
-
-                    return (
-                      inputAmount <= assetBalance! ||
-                      "Amount must be within balance"
-                    );
-                  },
+              validate: {
+                isNumber: (value) => {
+                  return typeof value === "number" || "Amount must be a number";
                 },
-              }}
+                isPositive: (value) => {
+                  return value > 0 || "Amount must be greater than 0";
+                },
+                withinBalance: (value) => {
+                  const collateral = props.collateral;
+                  const inputAmount = BigInt(
+                    Math.floor(
+                      Number(value) * 10 ** (collateral?.decimals as number),
+                    ),
+                  );
+                  const assetBalance = collateral?.balance;
+
+                  return (
+                    inputAmount <= assetBalance! ||
+                    "Amount must be within balance"
+                  );
+                },
+              },
+            }}
             render={({ field, fieldState }) => (
               <FormItem>
-                <FormLabel>Amount (${parseBigInt(collateralValue as bigint, 17, 2)})</FormLabel>
+                <FormLabel>
+                  Amount (${parseBigInt(collateralValue as bigint, 17, 2)})
+                </FormLabel>
                 <FormControl>
                   <DecimalInput
                     {...field}
@@ -164,7 +176,7 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
             )}
           />
           <div className="text-sm">
-            <span className="font-medium">New Ratio:</span> 1.6 <br/>
+            <span className="font-medium">New Ratio:</span> 1.6 <br />
           </div>
           <DialogFooter>
             <DialogClose asChild>
