@@ -22,6 +22,7 @@ import { sendTxSentToast, sendTxSuccessToast } from "./toasts";
 export interface PositionDialogProps extends DialogProps {
   positionToCheck: PositionDetails | undefined;
   collateral: SyntheticAssetInfo | undefined;
+  onSuccess?: () => void;
 }
 
 export const ClosePositionDialog = ({ ...props }: PositionDialogProps) => {
@@ -109,6 +110,7 @@ export const ClosePositionDialog = ({ ...props }: PositionDialogProps) => {
 
       sendTxSuccessToast(tx.transactionHash)
       setIsSubmitting(false);
+      props.onSuccess?.()
       props.onOpenChange?.(false);
     } catch (error) {
       console.error("Close position error:", error);

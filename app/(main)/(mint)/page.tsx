@@ -1059,7 +1059,6 @@ export default function Home() {
     <DropdownMenuContent>
       <DropdownMenuItem
         onClick={() => {
-          console.log("Position data for deposit:", position);
           setSelectedPosition({
             positionToCheck: position,
             collateral: collateralAssetsWithBalance.find(

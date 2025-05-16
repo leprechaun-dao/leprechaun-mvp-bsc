@@ -16,17 +16,20 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import Image from "next/image";
 import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { DialogProps } from "@radix-ui/react-dialog";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { readContract, writeContract } from "@wagmi/core";
+import { readContract, waitForTransactionReceipt } from "@wagmi/core";
 import * as constants from "@/utils/constants";
 import { parseBigInt } from "@/utils/web3";
 import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
 import { wagmiConfig } from "@/app/wagmiConfig";
 import { toast } from "sonner";
+import { sendTxSentToast, sendTxSuccessToast } from "./toasts";
+import { useWriteContract } from "wagmi";
 
 export interface PositionDialogProps extends DialogProps {
   positionToCheck: PositionDetails | undefined;
@@ -35,8 +38,17 @@ export interface PositionDialogProps extends DialogProps {
   onSuccess?: () => void;
 }
 
-export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
+export const DepositDialog = ({ ...props }: PositionDialogProps) => {
   const form = useForm();
+  const { writeContract, writeContractAsync } = useWriteContract({
+    mutation: {
+      onError(error) {
+        console.error("❌ Error on tx:", error);
+        toast.error("Transaction failed! Please try again");
+        setIsSubmitting(false)
+      },
+    },
+  });
 
   const [loading, setLoading] = useState(false);
 
@@ -75,110 +87,97 @@ export const DepositDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
   const handleSubmit = form.handleSubmit(async (data) => {
     if (!props.positionToCheck || !props.collateral) return;
 
-    try {
-      setIsSubmitting(true);
+    setIsSubmitting(true);
+    if ((props.allowance || 0) < cleanCollateralAmount!) {
 
-      // Convert amount to proper decimals
-      const decimals = props.collateral.decimals || 0;
-      const amountInWei = BigInt(Math.floor(data.amount * 10 ** decimals));
-
-      // Check allowance first
-      if (props.allowance && props.allowance < amountInWei) {
-        // Approve tokens first
-        const txHash = await writeContract(wagmiConfig, {
-          // @ts-expect-error this is a valid address
-          address: props.collateral.tokenAddress,
-          abi: constants.ERC20ABI,
-          functionName: "approve",
-          args: [constants.PositionManagerAddress, amountInWei]
-        });
-
-        toast("Approval transaction sent", {
-          action: {
-            label: "View on Explorer",
-            onClick: () => window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
-          },
-        });
-
-        // Wait for approval to be confirmed
-        // In a real implementation, you'd want to wait for the transaction receipt
-        await new Promise(r => setTimeout(r, 2000));
-      }
-
-      // Deposit collateral
-      const txHash = await writeContract(wagmiConfig, {
-        address: constants.PositionManagerAddress,
-        abi: constants.PositionManagerABI,
-        functionName: "depositCollateral",
-        args: [props.positionToCheck.positionId, amountInWei]
+      const abi = constants.ERC20ABI;
+      // approveTokens
+      const approvalTxHash = await writeContractAsync({
+        abi,
+        address: props.collateral.tokenAddress,
+        functionName: "approve",
+        args: [constants.PositionManagerAddress, cleanCollateralAmount],
       });
 
-      toast("Transaction sent", {
+      sendTxSentToast(approvalTxHash)
+
+      const approvalConfirmationTxHash = await waitForTransactionReceipt(
+        wagmiConfig,
+        {
+          hash: approvalTxHash,
+          confirmations: 3,
+        },
+      );
+
+      sendTxSuccessToast(approvalConfirmationTxHash.transactionHash)
+    } else {
+      const abi = constants.PositionManagerABI;
+
+      const amountInWei = BigInt(Math.floor(data.collateralAmount * 10 ** (props.collateral?.decimals as number)));
+
+      const createPositionTxHash = await writeContractAsync({
+        abi,
+        address: constants.PositionManagerAddress,
+        functionName: "depositCollateral",
+        args: [
+          props.positionToCheck.positionId,
+          amountInWei
+        ],
+      });
+
+      sendTxSentToast(createPositionTxHash)
+
+      const confirmationTx = await waitForTransactionReceipt(wagmiConfig, {
+        hash: createPositionTxHash,
+        confirmations: 3,
+      });
+
+      toast.success("Transaction confirmed.", {
         action: {
-          label: "View on Explorer",
-          onClick: () => window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
+          label: (
+            <div className="flex gap-2 items-center">
+              <Image
+                src="/uniswap.svg"
+                alt="Uniswap Logo"
+                width={24}
+                height={24}
+              />
+              Pool on Uniswap
+            </div>
+          ),
+          onClick: () => {
+            window.open(
+              `https://basescan.org/tx/${confirmationTx.transactionHash}`,
+              "_blank",
+            );
+          },
         },
       });
 
-      // Wait for confirmation
-      // In a real implementation, you'd use useWaitForTransactionReceipt or similar
-      await new Promise(r => setTimeout(r, 2000));
-
-      toast.success("Deposit successful!", {
-        description: `Added ${data.amount} ${props.collateral.symbol} to your position`
-      });
-
-      // Call success callback to refresh data
-      if (onSuccess) onSuccess();
-
-      // Close dialog
-      props.onOpenChange?.(false);
-
-      // Reset form
-      form.reset();
-      setCollateralValue(null);
-      setNewRatio(null);
-
-    } catch (error) {
-      console.error("Deposit error:", error);
-      toast.error("Transaction failed", {
-        description: error instanceof Error ? error.message : "Unknown error occurred"
-      });
-    } finally {
-      setIsSubmitting(false);
+      props.onOpenChange?.(false)
     }
+
+    props?.onSuccess?.();
+    setIsSubmitting(false);
   });
 
   const collateralAmountWatched = form.watch("collateralAmount") as number;
+  const cleanCollateralAmount = useMemo(() => {
+    if (collateralAmountWatched == null) return null;
 
-  useEffect(() => {
-    if (!props.open) {
-      form.reset();
-      setCollateralValue(null);
-      setNewRatio(null);
-    }
-console.log(collateralAmountWatched)
-    if ( collateralAmountWatched ) {
-      setLoading(true);
-      handleUpdateRatio(collateralAmountWatched);
-    } else {
-      setNewRatio(null)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.open, collateralAmountWatched]);
+    const decimals = props.collateral?.decimals || 0;
+    const value = BigInt(
+      Math.floor(Number(collateralAmountWatched) * 10 ** decimals),
+    );
 
+    return value;
+  }, [collateralAmountWatched]);
 
   const handleUpdateRatio = useDebouncedCallback(
-    async (collateralAmount) => {
-      if (!props.positionToCheck || !props.collateral) {
-        setCollateralValue(null);
-        setNewRatio(null);
-        return;
-      }
-
+    async (collateralAmount, position, collateral) => {
       try {
         const inputAmount = BigInt(
-          Math.floor(Number(collateralAmount) * 10 ** (props.collateral.decimals as number)),
+          Math.floor(Number(collateralAmount) * 10 ** (collateral.decimals as number)),
         );
 
         // Calculate USD value of added collateral
@@ -186,15 +185,15 @@ console.log(collateralAmountWatched)
           abi: constants.OracleInterfaceABI,
           address: constants.OracleInterfaceAddress,
           functionName: "getUsdValue",
-          args: [props.collateral.tokenAddress, inputAmount, props.collateral.decimals],
+          args: [collateral.tokenAddress, inputAmount, collateral.decimals],
         });
 
         setCollateralValue(collateralValueResult as bigint);
 
         // Calculate new collateral ratio
-        if (props.positionToCheck.debtUsdValue && props.positionToCheck.collateralUsdValue) {
-          const totalCollateralValue = (props.positionToCheck.collateralUsdValue as bigint) + (collateralValueResult as bigint);
-          const newRatio = Number(totalCollateralValue * BigInt(10000) / (props.positionToCheck.debtUsdValue as bigint)) / 100;
+        if (position.debtUsdValue && position.collateralUsdValue) {
+          const totalCollateralValue = (position.collateralUsdValue as bigint) + (collateralValueResult as bigint);
+          const newRatio = Number(totalCollateralValue * BigInt(10000) / (position.debtUsdValue as bigint)) / 100;
           setNewRatio(newRatio);
         }
         setLoading(false)
@@ -202,9 +201,26 @@ console.log(collateralAmountWatched)
         console.error("Error calculating values:", error);
       }
     },
-    [props.collateral, props.positionToCheck],
+    [],
     800,
   );
+
+    useEffect(() => {
+    if (!props.open) {
+      form.reset();
+      setCollateralValue(null);
+      setNewRatio(null);
+    }
+
+    if ( (props.positionToCheck && props.collateral) && collateralAmountWatched ) {
+      setLoading(true);
+      handleUpdateRatio(collateralAmountWatched, props.positionToCheck, props.collateral);
+    } else {
+      setNewRatio(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.open, collateralAmountWatched, handleUpdateRatio]);
+
 
   return (
     <Dialog {...props}>
@@ -286,8 +302,10 @@ console.log(collateralAmountWatched)
             <DialogClose asChild>
               <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSubmit} disabled={isSubmitting || loading}>
-              Deposit
+            <Button onClick={handleSubmit} disabled={isSubmitting || loading || !collateralAmountWatched}>
+               {props?.allowance as bigint >= (cleanCollateralAmount as bigint)
+                        ? "Mint"
+                        : "Approve"}
               {loading || isSubmitting && (
                 <Loader2 className="animate-spin size-3" />
               )}
