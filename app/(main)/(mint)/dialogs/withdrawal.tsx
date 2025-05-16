@@ -21,14 +21,15 @@ import * as constants from "@/utils/constants";
 import { parseBigInt } from "@/utils/web3";
 import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { DialogProps } from "@radix-ui/react-dialog";
-import { readContract } from "@wagmi/core";
+import { readContract, waitForTransactionReceipt } from "@wagmi/core";
 import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { parseUnits } from "viem";
-import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useWriteContract } from "wagmi";
+import { sendTxSentToast, sendTxSuccessToast } from "./toasts";
 
 export interface PositionDialogProps extends DialogProps {
   position: PositionDetails | undefined;
@@ -38,102 +39,49 @@ export interface PositionDialogProps extends DialogProps {
 }
 
 export const WithdrawalDialog = ({
-  onSuccess,
   ...props
 }: PositionDialogProps) => {
   const form = useForm();
   const [maxWithdrawable, setMaxWithdrawable] = useState<bigint | null>(null);
   const [newRatio, setNewRatio] = useState<number | null>(null);
   const [feeAmount, setFeeAmount] = useState<bigint | null>(null);
-  const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [invalid, setInvalid] = useState(false);
 
   // Use wagmi's useWriteContract hook
   const { writeContractAsync } = useWriteContract();
 
-  // Handle transaction receipt
-  const { status } = useWaitForTransactionReceipt({
-    hash: txHash || undefined,
-    confirmations: 1,
-  });
+  const amountWatched = form.watch("amount") as number;
 
   useEffect(() => {
     if (props.open && props.position) {
-      console.log("Position data:", props.position);
-
-      // Reset form when dialog opens
-      form.reset({
-        amount: "" as unknown as number,
-      });
-
       // Calculate max withdrawable amount
       calculateMaxWithdrawable();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.open, props.position]);
 
-  // Handle transaction status changes
-  useEffect(() => {
-    if (txHash && status === "pending") {
-      toast("Transaction sent.", {
-        action: {
-          label: "View on Explorer",
-          onClick: () =>
-            window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
-        },
-      });
-    }
-
-    if (status === "success") {
-      toast.success("Withdrawal successful!", {
-        description: `Withdrew collateral from your position`,
-        action: {
-          label: "View on Explorer",
-          onClick: () =>
-            window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
-        },
-      });
-
-      // Call success callback to refresh data
-      if (onSuccess) onSuccess();
-
-      // Close dialog
-      props.onOpenChange?.(false);
-
-      // Reset state
-      form.reset();
+      if (amountWatched && props.collateral) {
+        handleWithdrawalAmountChange(amountWatched, props.position, props.collateral)
+      }
+    } else {
+      form.reset()
+      setMaxWithdrawable(null)
       setNewRatio(null);
       setFeeAmount(null);
-      setTxHash(null);
-      setIsSubmitting(false);
     }
-
-    if (status === "error") {
-      toast.error("Transaction failed", {
-        description: "Error processing transaction",
-      });
-      setIsSubmitting(false);
-      setTxHash(null);
-    }
-  }, [status, txHash, onSuccess, props, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.open, props.position, props.collateral, amountWatched]);
 
   const calculateMaxWithdrawable = async () => {
-    if (!props.position || !props.collateral) return;
-
+    if (!props.position || !props.collateral || maxWithdrawable) return;
     try {
-      console.log("Calculating max withdrawable...");
-      console.log("Position:", props.position);
-      console.log("Collateral:", props.collateral);
-
       // Get effective collateral ratio (minimum required)
-      const effectiveRatio = await readContract(wagmiConfig, {
-        abi: constants.LeprechaunFactoryABI,
-        address: constants.LeprechaunFactoryAddress,
-        functionName: "getEffectiveCollateralRatio",
-        args: [props.position.syntheticAsset, props.position.collateralAsset],
-      });
-
-      console.log("Effective ratio:", effectiveRatio);
+      // const effectiveRatio = await readContract(wagmiConfig, {
+      //   abi: constants.LeprechaunFactoryABI,
+      //   address: constants.LeprechaunFactoryAddress,
+      //   functionName: "getEffectiveCollateralRatio",
+      //   args: [props.position.syntheticAsset, props.position.collateralAsset],
+      // });
+      setLoading(true)
 
       // Calculate required collateral based on debt
       const requiredCollateral = await readContract(wagmiConfig, {
@@ -147,9 +95,6 @@ export const WithdrawalDialog = ({
         ],
       });
 
-      console.log("Required collateral:", requiredCollateral);
-      console.log("Actual collateral:", props.position.collateralAmount);
-
       // Calculate max withdrawable (with some buffer)
       if (props.position.collateralAmount > (requiredCollateral as bigint)) {
         // Add 1% buffer to be safe
@@ -157,36 +102,33 @@ export const WithdrawalDialog = ({
           ((requiredCollateral as bigint) * BigInt(100)) / BigInt(9900);
         const maxWithdraw = props.position.collateralAmount - safetyBuffer;
         setMaxWithdrawable(maxWithdraw > 0 ? maxWithdraw : BigInt(0));
-        console.log("Max withdrawable set to:", maxWithdraw);
       } else {
         setMaxWithdrawable(BigInt(0));
-        console.log("Max withdrawable set to 0");
       }
+      setLoading(false)
     } catch (error) {
       console.error("Error calculating max withdrawable:", error);
       setMaxWithdrawable(BigInt(0));
+      setLoading(false)
     }
   };
 
   const handleWithdrawalAmountChange = useDebouncedCallback(
-    async (value: string) => {
-      if (
-        !props.position ||
-        !props.collateral ||
-        !value ||
-        parseFloat(value) <= 0
-      ) {
-        setNewRatio(null);
-        setFeeAmount(null);
-        return;
-      }
+    async (amount, position, collateral) => {
 
       try {
-        const decimals = props.collateral.decimals || 0;
-        const withdrawAmount = parseUnits(value, decimals);
+        setLoading(true)
+        const withdrawAmount = BigInt(
+          Math.floor(
+            Number(amount) * 10 ** (collateral.decimals as number),
+          ),
+        );
 
         // Ensure not trying to withdraw more than available
-        if (withdrawAmount > props.position.collateralAmount) {
+        if (withdrawAmount > position.collateralAmount) {
+          setLoading(false)
+          setInvalid(true)
+          toast.error("Cannot withdraw more than available collateral");
           return;
         }
 
@@ -203,7 +145,7 @@ export const WithdrawalDialog = ({
 
         // Calculate new ratio after withdrawal
         const remainingCollateral =
-          props.position.collateralAmount - withdrawAmount;
+          position.collateralAmount - withdrawAmount;
 
         // Get USD values
         const collateralUsdValue = await readContract(wagmiConfig, {
@@ -211,13 +153,13 @@ export const WithdrawalDialog = ({
           address: constants.OracleInterfaceAddress,
           functionName: "getUsdValue",
           args: [
-            props.position.collateralAsset,
+            position.collateralAsset,
             remainingCollateral,
-            props.collateral.decimals,
+            collateral.decimals,
           ],
         });
 
-        const debtUsdValue = props.position.debtUsdValue;
+        const debtUsdValue = position.debtUsdValue;
 
         if (debtUsdValue && debtUsdValue > 0) {
           const newCollateralRatio =
@@ -226,10 +168,12 @@ export const WithdrawalDialog = ({
                 (debtUsdValue as bigint),
             ) / 100;
           setNewRatio(newCollateralRatio);
-          console.log("New ratio calculated:", newCollateralRatio);
         }
+        setLoading(false)
+        setInvalid(false)
       } catch (error) {
         console.error("Error calculating new ratio:", error);
+        setLoading(false)
       }
     },
     [props.collateral, props.position],
@@ -238,28 +182,17 @@ export const WithdrawalDialog = ({
 
   const handleSubmit = form.handleSubmit(async (data) => {
     if (!props.position || !props.collateral) {
-      console.error("Missing position or collateral data");
       return;
     }
 
     try {
       setIsSubmitting(true);
-      console.log("Submitting withdrawal:", data);
 
       // Convert amount to proper decimals
       const decimals = props.collateral.decimals || 0;
       const amountString = data.amount.toString();
       const amountInWei = parseUnits(amountString, decimals);
 
-      console.log("Amount in wei:", amountInWei);
-      console.log("Position collateral:", props.position.collateralAmount);
-
-      // Check if amount is valid
-      if (amountInWei > (props.position.collateralAmount || BigInt(0))) {
-        toast.error("Cannot withdraw more than available collateral");
-        setIsSubmitting(false);
-        return;
-      }
 
       // Check if new ratio would be safe
       if (newRatio !== null) {
@@ -281,12 +214,6 @@ export const WithdrawalDialog = ({
         }
       }
 
-      console.log(
-        "Calling withdrawCollateral with:",
-        props.position.positionId,
-        amountInWei,
-      );
-
       // Withdraw collateral using wagmi's useWriteContractAsync
       const hash = await writeContractAsync({
         address: constants.PositionManagerAddress as `0x${string}`,
@@ -295,14 +222,22 @@ export const WithdrawalDialog = ({
         args: [props.position.positionId, amountInWei],
       });
 
-      console.log("Transaction hash:", hash);
-      setTxHash(hash);
+      sendTxSentToast(hash);
+
+      const txHash = await waitForTransactionReceipt(
+        wagmiConfig,
+        {
+          hash: hash,
+          confirmations: 3,
+        },
+      );
+      sendTxSuccessToast(txHash.transactionHash);
+      setIsSubmitting(false);
+      props.onSuccess?.()
+      props.onOpenChange?.(false);
     } catch (error) {
       console.error("Withdrawal error:", error);
-      toast.error("Transaction failed", {
-        description:
-          error instanceof Error ? error.message : "Unknown error occurred",
-      });
+      toast.error("Transaction failed");
       setIsSubmitting(false);
     }
   });
@@ -364,10 +299,6 @@ export const WithdrawalDialog = ({
                 <FormControl>
                   <DecimalInput
                     {...field}
-                    onChange={(e) => {
-                      field.onChange(e);
-                      handleWithdrawalAmountChange((e as number).toString());
-                    }}
                   />
                 </FormControl>
                 <FormMessage>{fieldState.error?.message}</FormMessage>
@@ -402,12 +333,9 @@ export const WithdrawalDialog = ({
             <DialogClose asChild>
               <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <Loader2 className="size-4 mx-4 animate-spin" />
-              ) : (
-                "Withdraw"
-              )}
+            <Button onClick={handleSubmit} disabled={isSubmitting || !amountWatched || loading|| invalid}>
+              {invalid? "Invalid": "Withdraw"}
+              {(loading || isSubmitting) && <Loader2 className="animate-spin size-3" />}
             </Button>
           </DialogFooter>
         </Form>
