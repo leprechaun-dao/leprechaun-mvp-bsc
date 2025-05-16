@@ -40,7 +40,7 @@ export interface PositionDialogProps extends DialogProps {
 
 export const DepositDialog = ({ ...props }: PositionDialogProps) => {
   const form = useForm();
-  const { writeContract, writeContractAsync } = useWriteContract({
+  const { writeContractAsync } = useWriteContract({
     mutation: {
       onError(error) {
         console.error("❌ Error on tx:", error);
@@ -94,6 +94,7 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
       // approveTokens
       const approvalTxHash = await writeContractAsync({
         abi,
+        // @ts-expect-error this is a valid address
         address: props.collateral.tokenAddress,
         functionName: "approve",
         args: [constants.PositionManagerAddress, cleanCollateralAmount],
