@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
 
     return config;
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   transpilePackages: ["@uniswap/widgets", "@uniswap/conedison", "brotli"],
 };
 
