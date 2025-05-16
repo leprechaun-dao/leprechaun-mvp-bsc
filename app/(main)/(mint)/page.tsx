@@ -88,7 +88,7 @@ const TokenSelectorButton = ({
           <span className="group-hover:block group-focus-visible:block hidden">
             Change Token
           </span>
-          <span className="group-hover:hidden group-focus-visible:hidden flex items-center gap-1">
+          <span className="group-hover:hidden group-focus-visible:hidden flex items-center gap-2">
             <Image
               src={assetsImages[selectedSymbol]}
               alt={`${selectedSymbol} Icon`}
@@ -1010,127 +1010,99 @@ export default function Home() {
                       .filter((position) => position.isActive)
                       .map((position) => (
                         <TableRow key={position.positionId}>
-<TableCell>
-  <div className="flex items-center gap-1">
-    <Image
-      src={assetsImages[position.syntheticSymbol]}
-      alt={`${position.syntheticSymbol} Icon`}
-      className="rounded-full"
-      width={16}
-      height={16}
-    />
-    <span className="leading-none">
-      {position.syntheticSymbol}
-    </span>
-  </div>
-</TableCell>
-<TableCell>
-  {parseBigInt(position.mintedAmount, 18, 3)}
-</TableCell>
-<TableCell>
-  <div className="flex items-center gap-1">
-    <Image
-      src={assetsImages[position.collateralSymbol || ""]}
-      alt={`${position.collateralSymbol} Icon`}
-      className="rounded-full"
-      width={16}
-      height={16}
-    />
-    {parseBigInt(
-      position.collateralAmount,
-      getDecimalsPerCollateralSymbol(position.collateralSymbol),
-      4,
-    )}
-  </div>
-</TableCell>
-<TableCell>
-  {parseBigInt(position.currentRatio as bigint, 2, 2)}%
-</TableCell>
-<TableCell>
-  {parseBigInt(position.requiredRatio as bigint, 2, 2)}%
-</TableCell>
-<TableCell>
-  <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-      <Button variant="ghost" className="px-1">
-        <EllipsisVertical className="size-4" />
-      </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent>
-      <DropdownMenuItem
-        onClick={() => {
-          setSelectedPosition({
-            positionToCheck: position,
-            collateral: collateralAssetsWithBalance.find(
-              (collateralAsset) =>
-                collateralAsset.symbol === position.collateralSymbol
-            ),
-            allowance: getAllowanceForSymbol(position.collateralSymbol),
-            onSuccess: () => {
-              // Refresh user positions
-              openPositionsContractCall.refetch();
-              // Refresh allowances and balances
-              allowanceAndBalanceContract.refetch();
-            }
-          });
-          setOpenDialog("deposit");
-        }}
-      >
-        <BanknoteArrowUp className="mr-2 size-4" />
-        Deposit
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        onClick={() => {
-          // Log the position data to confirm it exists
-          console.log("Position data for withdrawal:", position);
-
-          setSelectedPosition({
-            positionToCheck: position,
-            collateral: collateralAssetsWithBalance.find(
-              (collateralAsset) =>
-                collateralAsset.symbol === position.collateralSymbol
-            ),
-            allowance: getAllowanceForSymbol(position.collateralSymbol),
-            onSuccess: () => {
-              // Refresh user positions
-              openPositionsContractCall.refetch();
-              // Refresh allowances and balances
-              allowanceAndBalanceContract.refetch();
-            }
-          });
-          setOpenDialog("withdrawal");
-        }}
-      >
-        <BanknoteArrowDown className="mr-2 size-4" />
-        Withdraw
-      </DropdownMenuItem>
-      <DropdownMenuItem
-        onClick={() => {
-          console.log("Position data for close:", position);
-          setSelectedPosition({
-            positionToCheck: position,
-            collateral: collateralAssetsWithBalance.find(
-              (collateralAsset) =>
-                collateralAsset.symbol === position.collateralSymbol
-            ),
-            allowance: getAllowanceForSymbol(position.collateralSymbol),
-            onSuccess: () => {
-              // Refresh user positions
-              openPositionsContractCall.refetch();
-              // Refresh allowances and balances
-              allowanceAndBalanceContract.refetch();
-            }
-          });
-          setOpenDialog("close-position");
-        }}
-      >
-        <BanknoteX className="mr-2 size-4" />
-        Close Position
-      </DropdownMenuItem>
-    </DropdownMenuContent>
-  </DropdownMenu>
-</TableCell>
-</TableRow>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Image
+                                src={assetsImages[position.syntheticSymbol]}
+                                alt={`${position.syntheticSymbol} Icon`}
+                                className="rounded-full"
+                                width={16}
+                                height={16}
+                              />
+                              <span className="leading-none">
+                                {position.syntheticSymbol}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {parseBigInt(position.mintedAmount, 18, 3)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Image
+                                src={
+                                  assetsImages[position.collateralSymbol || ""]
+                                }
+                                alt={`${position.collateralSymbol} Icon`}
+                                className="rounded-full"
+                                width={16}
+                                height={16}
+                              />
+                              {parseBigInt(
+                                position.collateralAmount,
+                                getDecimalsPerCollateralSymbol(
+                                  position.collateralSymbol,
+                                ),
+                                4,
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {parseBigInt(position.currentRatio as bigint, 2, 2)}
+                            %
+                          </TableCell>
+                          <TableCell>
+                            {parseBigInt(
+                              position.requiredRatio as bigint,
+                              2,
+                              2,
+                            )}
+                            %
+                          </TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="px-1">
+                                  <EllipsisVertical className="size-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedPosition({
+                                      positionToCheck: position,
+                                      collateral:
+                                        collateralAssetsWithBalance.find(
+                                          (collateralAsset) =>
+                                            collateralAsset.symbol ===
+                                            position.collateralSymbol,
+                                        ),
+                                      allowance: allowance,
+                                    });
+                                    setOpenDialog("deposit");
+                                  }}
+                                >
+                                  <BanknoteArrowUp />
+                                  Deposit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => setOpenDialog("withdrawal")}
+                                >
+                                  <BanknoteArrowDown />
+                                  Withdrawal
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    setOpenDialog("close-position")
+                                  }
+                                >
+                                  <BanknoteX />
+                                  Close Position
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
                       ))
                   ) : (
                     <TableRow>

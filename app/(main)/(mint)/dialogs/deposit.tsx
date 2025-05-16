@@ -1,3 +1,4 @@
+import { wagmiConfig } from "@/app/wagmiConfig";
 import { DecimalInput } from "@/components/DecimalInput";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +17,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import Image from "next/image";
+import * as constants from "@/utils/constants";
+import { parseBigInt } from "@/utils/web3";
 import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { DialogProps } from "@radix-ui/react-dialog";
+import { readContract } from "@wagmi/core";
+import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
