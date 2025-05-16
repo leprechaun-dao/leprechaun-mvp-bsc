@@ -1,18 +1,19 @@
 import { Input } from "@/components/ui/input";
 
-const defaultFormatter = new Intl.NumberFormat("en-US", {
-  style: "decimal",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+const getFormatter = (digits: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "decimal",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 
 export const DecimalInput = ({
-  formatter = defaultFormatter,
   placeholder = "0.00",
+  digits = 2,
   onChange,
   ...props
 }: {
-  formatter?: Intl.NumberFormat;
+  digits?: number;
   onChange?: (value: number | undefined) => void;
 } & React.ComponentProps<"input">) => {
   return (
@@ -23,15 +24,15 @@ export const DecimalInput = ({
       // the input to be controlled and uncontrolled at the same time.
       value={undefined}
       onChange={(e) => {
-        const digits = e.target.value.replace(/[^0-9]/g, "");
-        const number = Number(digits) / 100;
+        const inputValue = e.target.value.replace(/[^0-9]/g, "");
+        const number = Number(inputValue) / 10 ** digits;
         if (number === 0) {
           e.target.value = "";
           onChange?.(0);
           return;
         }
 
-        const formattedValue = formatter.format(number);
+        const formattedValue = getFormatter(digits).format(number);
         e.target.value = formattedValue;
         onChange?.(number);
       }}

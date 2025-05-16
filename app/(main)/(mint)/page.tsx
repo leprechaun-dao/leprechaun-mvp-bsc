@@ -165,6 +165,21 @@ function getDecimalsPerCollateralSymbol(symbol: string): number {
   }
 }
 
+function getInputDecimalsPerCollateralSymbol(
+  symbol: string | undefined,
+): number {
+  switch (symbol) {
+    case "mUSDC":
+      return 2;
+    case "mWETH":
+      return 4;
+    case "mWBTC":
+      return 8;
+    default:
+      return 2;
+  }
+}
+
 export default function Home() {
   const form = useForm();
   const account = useAccount();
@@ -764,7 +779,16 @@ export default function Home() {
                       <div className="flex items-end gap-2">
                         <FormControl>
                           <DecimalInput
+                            key={collateralWatched?.symbol}
                             className="h-14"
+                            placeholder={`0.${"0".repeat(
+                              getInputDecimalsPerCollateralSymbol(
+                                collateralWatched?.symbol,
+                              ),
+                            )}`}
+                            digits={getInputDecimalsPerCollateralSymbol(
+                              collateralWatched?.symbol,
+                            )}
                             {...field}
                             disabled={!collateralWatched}
                           />
@@ -798,6 +822,10 @@ export default function Home() {
                                   tokens={collateralAssetsWithBalance}
                                   onSelect={(token) => {
                                     field.onChange(token);
+                                    form.setValue(
+                                      "collateralAmount",
+                                      undefined,
+                                    );
                                     setCollateralTokenSelectorOpen(false);
                                   }}
                                 />
