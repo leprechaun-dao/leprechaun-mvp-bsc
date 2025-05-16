@@ -478,22 +478,22 @@ export default function Home() {
     await allowanceAndBalanceContract.refetch();
   });
 
-  async function mintMockCollateral(mock: "USDC" | "wETH" | "wBTC") {
+  async function mintMockCollateral(mock: "mUSDC" | "mWETH" | "mWBTC") {
     const abi = constants.SyntheticAssetABI;
 
     let contractAddress: `0x${string}` | null = null;
     let amount = BigInt(0);
 
     switch (mock) {
-      case "wBTC":
+      case "mWBTC":
         contractAddress = constants.mWBTCAddress;
         amount = BigInt(1) * BigInt(10 ** 8);
         break;
-      case "wETH":
+      case "mWETH":
         contractAddress = constants.mWETHAddress;
         amount = BigInt(50) * BigInt(10 ** 18);
         break;
-      case "USDC":
+      case "mUSDC":
         contractAddress = constants.mUSDCAddress;
         amount = BigInt(100_000) * BigInt(10 ** 6);
         break;
@@ -699,28 +699,25 @@ export default function Home() {
           <CardContent>
             <div className="grid grid-cols-3 gap-2">
               <Button
-                id="USDC"
                 variant="secondary"
                 disabled={account.status !== "connected"}
-                onClick={() => mintMockCollateral("USDC")}
+                onClick={() => mintMockCollateral("mUSDC")}
               >
                 Mint mUSDC
               </Button>
 
               <Button
-                id="wETH"
                 variant="secondary"
                 disabled={account.status !== "connected"}
-                onClick={() => mintMockCollateral("wETH")}
+                onClick={() => mintMockCollateral("mWETH")}
               >
                 Mint mWETH
               </Button>
 
               <Button
-                id="wBTC"
                 variant="secondary"
                 disabled={account.status !== "connected"}
-                onClick={() => mintMockCollateral("wBTC")}
+                onClick={() => mintMockCollateral("mWBTC")}
               >
                 Mint mWBTC
               </Button>
