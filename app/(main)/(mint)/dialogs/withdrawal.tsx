@@ -56,10 +56,6 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
     enabled: !!txHash,
   });
 
-  console.log("WithdrawalDialog props:", props);
-  console.log("Position to check:", props.positionToCheck);
-  console.log("Collateral:", props.collateral);
-
   useEffect(() => {
     if (props.open && props.positionToCheck) {
       console.log("Position data:", props.positionToCheck);

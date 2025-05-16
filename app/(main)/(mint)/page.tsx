@@ -324,11 +324,6 @@ export default function Home() {
   });
 
   const minCollateralRatio = useMemo(() => {
-    console.log(
-      "getMinCollateralRatioContract.data",
-      getMinCollateralRatioContract.data,
-    );
-
     const result = getMinCollateralRatioContract.data as bigint;
     const minCollateralRatio = result ? Number(result) / 100 : 150;
 
