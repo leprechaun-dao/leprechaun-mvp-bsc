@@ -1071,32 +1071,70 @@ export default function Home() {
                                   onClick={() => {
                                     setSelectedPosition({
                                       positionToCheck: position,
-                                      collateral:
-                                        collateralAssetsWithBalance.find(
-                                          (collateralAsset) =>
-                                            collateralAsset.symbol ===
-                                            position.collateralSymbol,
-                                        ),
-                                      allowance: allowance,
+                                      collateral: collateralAssetsWithBalance.find(
+                                        (collateralAsset) =>
+                                          collateralAsset.symbol === position.collateralSymbol
+                                      ),
+                                      allowance: getAllowanceForSymbol(position.collateralSymbol),
+                                      onSuccess: () => {
+                                        // Refresh user positions
+                                        openPositionsContractCall.refetch();
+                                        // Refresh allowances and balances
+                                        allowanceAndBalanceContract.refetch();
+                                      }
                                     });
                                     setOpenDialog("deposit");
                                   }}
                                 >
-                                  <BanknoteArrowUp />
+                                  <BanknoteArrowUp className="mr-2 size-4" />
                                   Deposit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() => setOpenDialog("withdrawal")}
+                                  onClick={() => {
+                                    // Log the position data to confirm it exists
+                                    console.log("Position data for withdrawal:", position);
+
+                                    setSelectedPosition({
+                                      positionToCheck: position,
+                                      collateral: collateralAssetsWithBalance.find(
+                                        (collateralAsset) =>
+                                          collateralAsset.symbol === position.collateralSymbol
+                                      ),
+                                      allowance: getAllowanceForSymbol(position.collateralSymbol),
+                                      onSuccess: () => {
+                                        // Refresh user positions
+                                        openPositionsContractCall.refetch();
+                                        // Refresh allowances and balances
+                                        allowanceAndBalanceContract.refetch();
+                                      }
+                                    });
+                                    setOpenDialog("withdrawal");
+                                  }}
                                 >
-                                  <BanknoteArrowDown />
-                                  Withdrawal
+                                  <BanknoteArrowDown className="mr-2 size-4" />
+                                  Withdraw
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
-                                  onClick={() =>
-                                    setOpenDialog("close-position")
-                                  }
+                                  onClick={() => {
+                                    console.log("Position data for close:", position);
+                                    setSelectedPosition({
+                                      positionToCheck: position,
+                                      collateral: collateralAssetsWithBalance.find(
+                                        (collateralAsset) =>
+                                          collateralAsset.symbol === position.collateralSymbol
+                                      ),
+                                      allowance: getAllowanceForSymbol(position.collateralSymbol),
+                                      onSuccess: () => {
+                                        // Refresh user positions
+                                        openPositionsContractCall.refetch();
+                                        // Refresh allowances and balances
+                                        allowanceAndBalanceContract.refetch();
+                                      }
+                                    });
+                                    setOpenDialog("close-position");
+                                  }}
                                 >
-                                  <BanknoteX />
+                                  <BanknoteX className="mr-2 size-4" />
                                   Close Position
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
