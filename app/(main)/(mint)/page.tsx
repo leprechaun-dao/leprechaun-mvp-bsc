@@ -291,7 +291,7 @@ export default function Home() {
   const [selectedPosition, setSelectedPosition] = useState<
     PositionDetails | undefined
   >(undefined);
-  const { writeContract, writeContractAsync } = useWriteContract({
+  const { writeContractAsync } = useWriteContract({
     mutation: {
       onError(error) {
         console.error("❌ Error on tx:", error);
