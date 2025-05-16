@@ -472,6 +472,7 @@ export default function Home() {
       });
 
       await openPositionsContractCall.refetch();
+      form.reset();
     }
 
     await allowanceAndBalanceContract.refetch();
