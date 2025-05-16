@@ -152,6 +152,19 @@ const factoryContract = {
   abi: constants.LeprechaunFactoryABI,
 } as const;
 
+function getDecimalsPerCollateralSymbol(symbol: string): number {
+  switch (symbol) {
+    case "mUSDC":
+      return 6;
+    case "mWETH":
+      return 18;
+    case "mWBTC":
+      return 8;
+    default:
+      return 0;
+  }
+}
+
 export default function Home() {
   const form = useForm();
   const account = useAccount();
@@ -448,36 +461,35 @@ export default function Home() {
     await allowanceAndBalanceContract.refetch();
   });
 
-  // @ts-expect-error types dont matter here
-  function mintMockCollateral(e) {
-    const buttonId = e.target.id;
+  function mintMockCollateral(mock: "USDC" | "wETH" | "wBTC") {
     const abi = constants.SyntheticAssetABI;
 
-    let contractAddress;
+    let contractAddress: `0x${string}` | null = null;
     let amount = BigInt(10_000_000);
 
-    switch (buttonId) {
+    switch (mock) {
       case "wBTC":
         contractAddress = constants.mWBTCAddress;
-        amount = amount * BigInt(10 * 10 ** 8);
+        amount = BigInt(1) * BigInt(10 ** 8);
         break;
       case "wETH":
         contractAddress = constants.mWETHAddress;
-        amount = amount * BigInt(10 * 10 ** 18);
+        amount = BigInt(50) * BigInt(10 ** 18);
         break;
       case "USDC":
         contractAddress = constants.mUSDCAddress;
-        amount = amount * BigInt(10 * 10 ** 6);
+        amount = BigInt(100_000) * BigInt(10 ** 6);
         break;
 
       default:
         break;
     }
 
+    if (!contractAddress) return;
+
     writeContract({
       abi,
-      // @ts-expect-error address is alread 0x${string}
-      address: contractAddress!,
+      address: contractAddress,
       functionName: "mint",
       args: [account.address, amount],
     });
@@ -576,73 +588,6 @@ export default function Home() {
     handleUpdateMintedAmount,
   ]);
 
-  function getDecimalsPerCollateralSymbol(symbol: string): number {
-    switch (symbol) {
-      case "mUSDC":
-        return 6;
-      case "mWETH":
-        return 18;
-      case "mWBTC":
-        return 8;
-      default:
-        return 0;
-    }
-  }
-
-  // @ts-expect-error types dont matter here
-  async function addTokenToWallet(e) {
-    const buttonId = e.target.id;
-
-    let tokenAddress;
-    let tokenSymbol;
-    let decimals;
-
-    switch (buttonId) {
-      case "mUSDC":
-        tokenAddress = "0x39510c9f9E577c65b9184582745117341e7bdD73";
-        tokenSymbol = "mUSDC";
-        decimals = 6;
-
-        break;
-      case "mWETH":
-        tokenAddress = "0x95539ce7555F53dACF3a79Ff760C06e5B4e310c3";
-        tokenSymbol = "mWETH";
-        decimals = 18;
-
-        break;
-      case "mWBTC":
-        tokenAddress = "0x1DBf5683c73E0D0A0e20AfC76F924e08E95637F7";
-        tokenSymbol = "mWBTC";
-        decimals = 8;
-        break;
-      default:
-        break;
-    }
-
-    try {
-      // eslint-disable-next-line  @typescript-eslint/no-explicit-any
-      const wasAdded = await (window as any).ethereum.request({
-        method: "wallet_watchAsset",
-        params: {
-          type: "ERC20",
-          options: {
-            address: tokenAddress,
-            symbol: tokenSymbol,
-            decimals: decimals,
-          },
-        },
-      });
-
-      if (wasAdded) {
-        console.log("Thanks for your interest!");
-      } else {
-        console.log("Your loss!");
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
   return (
     <div className="flex flex-col min-h-screen w-full">
       {/* @ts-expect-error we dont care about these issues rn */}
@@ -672,6 +617,45 @@ export default function Home() {
 
       <Header activeRoute="mint" />
       <main className="flex flex-col gap-5 flex-1 items-center justify-center mb-[20vh] px-6">
+        <Card className="w-2xl">
+          <CardHeader>
+            <CardTitle>Mint Mock Collateral</CardTitle>
+            <CardDescription>
+              Mint mock collateral to test the protocol.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              <Button
+                id="USDC"
+                variant="secondary"
+                disabled={account.status !== "connected"}
+                onClick={() => mintMockCollateral("USDC")}
+              >
+                Mint mUSDC
+              </Button>
+
+              <Button
+                id="wETH"
+                variant="secondary"
+                disabled={account.status !== "connected"}
+                onClick={() => mintMockCollateral("wETH")}
+              >
+                Mint mWETH
+              </Button>
+
+              <Button
+                id="wBTC"
+                variant="secondary"
+                disabled={account.status !== "connected"}
+                onClick={() => mintMockCollateral("wBTC")}
+              >
+                Mint mWBTC
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="w-2xl">
           <Form {...form}>
             <CardHeader>
@@ -915,68 +899,6 @@ export default function Home() {
                         : "Approve"}
                     </span>
                   </Button>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    <div className="flex gap-1">
-                      <Button
-                        id="USDC"
-                        variant="secondary"
-                        disabled={account.status !== "connected"}
-                        onClick={mintMockCollateral}
-                        className="w-36"
-                      >
-                        mUSDC
-                      </Button>
-                      <Button
-                        id="mUSDC"
-                        className="w-10"
-                        variant="secondary"
-                        disabled={account.status !== "connected"}
-                        onClick={addTokenToWallet}
-                      >
-                        Add
-                      </Button>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        id="wETH"
-                        variant="secondary"
-                        disabled={account.status !== "connected"}
-                        onClick={mintMockCollateral}
-                        className="w-36"
-                      >
-                        mWETH
-                      </Button>
-                      <Button
-                        id="mWETH"
-                        className="w-10"
-                        variant="secondary"
-                        disabled={account.status !== "connected"}
-                        onClick={addTokenToWallet}
-                      >
-                        Add
-                      </Button>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        id="wBTC"
-                        variant="secondary"
-                        disabled={account.status !== "connected"}
-                        onClick={mintMockCollateral}
-                        className="w-36"
-                      >
-                        mWBTC
-                      </Button>
-                      <Button
-                        id="mWBTC"
-                        className="w-10"
-                        variant="secondary"
-                        disabled={account.status !== "connected"}
-                        onClick={addTokenToWallet}
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  </div>
                 </div>
                 <CardFooter>
                   <div className="w-full text-center text-xs text-neutral-400">
