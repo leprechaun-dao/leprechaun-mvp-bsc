@@ -1,5 +1,5 @@
 export interface SyntheticAssetInfo {
-  tokenAddress: string;
+  tokenAddress: `0x${string}`;
   name: string;
   symbol?: string;
   minCollateralRatio?: bigint;
@@ -17,9 +17,9 @@ export interface SyntheticAssetInfo {
 export interface PositionDetails {
   positionId: bigint;
   owner: string;
-  syntheticAsset: string;
+  syntheticAsset: `0x${string}`;
   syntheticSymbol: string;
-  collateralAsset: string;
+  collateralAsset: `0x${string}`;
   collateralSymbol: string;
   collateralAmount: bigint;
   mintedAmount: bigint;

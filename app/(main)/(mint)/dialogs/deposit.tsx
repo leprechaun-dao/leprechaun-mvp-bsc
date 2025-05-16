@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { wagmiConfig } from "@/app/wagmiConfig";
 import { DecimalInput } from "@/components/DecimalInput";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,22 +17,22 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
-import { DialogProps } from "@radix-ui/react-dialog";
-import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
-import { Loader2 } from "lucide-react";
-import { useEffect, useState, useMemo } from "react";
-import { useForm } from "react-hook-form";
-import { readContract, waitForTransactionReceipt } from "@wagmi/core";
 import * as constants from "@/utils/constants";
 import { parseBigInt } from "@/utils/web3";
-import { wagmiConfig } from "@/app/wagmiConfig";
+import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
+import { DialogProps } from "@radix-ui/react-dialog";
+import { readContract, waitForTransactionReceipt } from "@wagmi/core";
+import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
+import { Loader2 } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { sendTxSentToast, sendTxSuccessToast } from "./toasts";
 import { useWriteContract } from "wagmi";
+import { sendTxSentToast, sendTxSuccessToast } from "./toasts";
 
 export interface PositionDialogProps extends DialogProps {
-  positionToCheck: PositionDetails | undefined;
+  position: PositionDetails | undefined;
   collateral: SyntheticAssetInfo | undefined;
   allowance: bigint | null;
   onSuccess?: () => void;
@@ -45,7 +45,7 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
       onError(error) {
         console.error("❌ Error on tx:", error);
         toast.error("Transaction failed! Please try again");
-        setIsSubmitting(false)
+        setIsSubmitting(false);
       },
     },
   });
@@ -57,50 +57,44 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const ratioAvaliation = useMemo(() => {
-    if (!newRatio) return null
-    let textColor
-    let text
+    if (!newRatio) return null;
+    let textColor;
+    let text;
 
     if (newRatio < 150) {
-      textColor = "text-red-500"
-      text = "⚠️ Danger zone"
+      textColor = "text-red-500";
+      text = "⚠️ Danger zone";
     } else if (newRatio > 180) {
-      textColor = "text-green-500"
+      textColor = "text-green-500";
     } else {
-      textColor = "text-yellow-500"
+      textColor = "text-yellow-500";
     }
     if (newRatio < 180) {
-      text = "⚠️ Close to liquidation threshold"
+      text = "⚠️ Close to liquidation threshold";
     } else if (newRatio > 250) {
-      text = "✅ Very safe position"
+      text = "✅ Very safe position";
     } else {
-      text = "✅ Safe position"
+      text = "✅ Safe position";
     }
 
-    return (
-    <div className={`text-xs ${textColor}`}>
-      {text}
-    </div>
-    )
-  }, [newRatio])
+    return <div className={`text-xs ${textColor}`}>{text}</div>;
+  }, [newRatio]);
 
   const handleSubmit = form.handleSubmit(async (data) => {
-    if (!props.positionToCheck || !props.collateral) return;
+    if (!props.position || !props.collateral) return;
 
     setIsSubmitting(true);
     if ((props.allowance || 0) < cleanCollateralAmount!) {
-
       const abi = constants.ERC20ABI;
       // approveTokens
       const approvalTxHash = await writeContractAsync({
         abi,
-        // @ts-expect-error this is a valid address
         address: props.collateral.tokenAddress,
         functionName: "approve",
         args: [constants.PositionManagerAddress, cleanCollateralAmount],
       });
 
-      sendTxSentToast(approvalTxHash)
+      sendTxSentToast(approvalTxHash);
 
       const approvalConfirmationTxHash = await waitForTransactionReceipt(
         wagmiConfig,
@@ -110,23 +104,24 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
         },
       );
 
-      sendTxSuccessToast(approvalConfirmationTxHash.transactionHash)
+      sendTxSuccessToast(approvalConfirmationTxHash.transactionHash);
     } else {
       const abi = constants.PositionManagerABI;
 
-      const amountInWei = BigInt(Math.floor(data.collateralAmount * 10 ** (props.collateral?.decimals as number)));
+      const amountInWei = BigInt(
+        Math.floor(
+          data.collateralAmount * 10 ** (props.collateral?.decimals as number),
+        ),
+      );
 
       const createPositionTxHash = await writeContractAsync({
         abi,
         address: constants.PositionManagerAddress,
         functionName: "depositCollateral",
-        args: [
-          props.positionToCheck.positionId,
-          amountInWei
-        ],
+        args: [props.position.positionId, amountInWei],
       });
 
-      sendTxSentToast(createPositionTxHash)
+      sendTxSentToast(createPositionTxHash);
 
       const confirmationTx = await waitForTransactionReceipt(wagmiConfig, {
         hash: createPositionTxHash,
@@ -155,7 +150,7 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
         },
       });
 
-      props.onOpenChange?.(false)
+      props.onOpenChange?.(false);
     }
 
     props?.onSuccess?.();
@@ -178,7 +173,9 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
     async (collateralAmount, position, collateral) => {
       try {
         const inputAmount = BigInt(
-          Math.floor(Number(collateralAmount) * 10 ** (collateral.decimals as number)),
+          Math.floor(
+            Number(collateralAmount) * 10 ** (collateral.decimals as number),
+          ),
         );
 
         // Calculate USD value of added collateral
@@ -193,11 +190,17 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
 
         // Calculate new collateral ratio
         if (position.debtUsdValue && position.collateralUsdValue) {
-          const totalCollateralValue = (position.collateralUsdValue as bigint) + (collateralValueResult as bigint);
-          const newRatio = Number(totalCollateralValue * BigInt(10000) / (position.debtUsdValue as bigint)) / 100;
+          const totalCollateralValue =
+            (position.collateralUsdValue as bigint) +
+            (collateralValueResult as bigint);
+          const newRatio =
+            Number(
+              (totalCollateralValue * BigInt(10000)) /
+                (position.debtUsdValue as bigint),
+            ) / 100;
           setNewRatio(newRatio);
         }
-        setLoading(false)
+        setLoading(false);
       } catch (error) {
         console.error("Error calculating values:", error);
       }
@@ -206,22 +209,25 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
     800,
   );
 
-    useEffect(() => {
+  useEffect(() => {
     if (!props.open) {
       form.reset();
       setCollateralValue(null);
       setNewRatio(null);
     }
 
-    if ( (props.positionToCheck && props.collateral) && collateralAmountWatched ) {
+    if (props.position && props.collateral && collateralAmountWatched) {
       setLoading(true);
-      handleUpdateRatio(collateralAmountWatched, props.positionToCheck, props.collateral);
+      handleUpdateRatio(
+        collateralAmountWatched,
+        props.position,
+        props.collateral,
+      );
     } else {
-      setNewRatio(null)
+      setNewRatio(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.open, collateralAmountWatched, handleUpdateRatio]);
-
 
   return (
     <Dialog {...props}>
@@ -233,14 +239,19 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
           </DialogDescription>
           <div className="text-sm space-y-2">
             <div>
-              <span className="font-medium">Position ID:</span> {props.positionToCheck?.positionId.toString()}
+              <span className="font-medium">Position ID:</span>{" "}
+              {props.position?.positionId.toString()}
             </div>
             <div>
-              <span className="font-medium">Collateral:</span> {props.positionToCheck?.collateralSymbol}
+              <span className="font-medium">Collateral:</span>{" "}
+              {props.position?.collateralSymbol}
             </div>
             <div>
-              <span className="font-medium">Current Ratio:</span> {props.positionToCheck?.currentRatio ?
-                parseBigInt(props.positionToCheck.currentRatio as bigint, 2, 2) : '0'}%
+              <span className="font-medium">Current Ratio:</span>{" "}
+              {props.position?.currentRatio
+                ? parseBigInt(props.position.currentRatio as bigint, 2, 2)
+                : "0"}
+              %
             </div>
           </div>
           <FormField
@@ -250,9 +261,7 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
               required: "Amount is required",
               validate: {
                 isNumber: (value) => {
-                  return (
-                    typeof value === "number" || "Amount must be a number"
-                  );
+                  return typeof value === "number" || "Amount must be a number";
                 },
                 isPositive: (value) => {
                   return value > 0 || "Amount must be greater than 0";
@@ -260,8 +269,14 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
                 withinBalance: (value) => {
                   const inputAmount = BigInt(
                     Math.floor(
-                      Number(value) * 10 ** (props.collateral?.decimals as number),
+                      Number(value) *
+                        10 ** (props.collateral?.decimals as number),
                     ),
+                  );
+                  console.log(
+                    props.collateral,
+                    props.collateral?.balance,
+                    inputAmount,
                   );
                   const assetBalance = props.collateral?.balance as bigint;
 
@@ -276,25 +291,28 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
               <FormItem>
                 <FormLabel className="flex gap-[24%]">
                   <span>
-                    Amount {collateralValue ?
-                    `(~$${parseBigInt(collateralValue, 18, 2)})` : ''}
+                    Amount{" "}
+                    {collateralValue
+                      ? `(~$${parseBigInt(collateralValue, 18, 2)})`
+                      : ""}
                   </span>
 
                   <span className="flex gap-[12px]">
-                    New Ratio: {loading && (<Loader2 className="animate-spin size-3" />)}
-                    {" "}{newRatio && <>{newRatio.toFixed(2)}%</>}
+                    New Ratio:{" "}
+                    {loading && <Loader2 className="animate-spin size-3" />}{" "}
+                    {newRatio && <>{newRatio.toFixed(2)}%</>}
                   </span>
                 </FormLabel>
                 <FormControl>
-                  <DecimalInput
-                    {...field}
-                  />
+                  <DecimalInput {...field} />
                 </FormControl>
                 <FormMessage>{fieldState.error?.message}</FormMessage>
               </FormItem>
             )}
           />
-          <div className={`text-center text-xs ${newRatio ? "":"text-gray-500"}`}>
+          <div
+            className={`text-center text-xs ${newRatio ? "" : "text-gray-500"}`}
+          >
             <span className="flex justify-center">
               Position avaliation: {newRatio && ratioAvaliation}
             </span>
@@ -303,13 +321,15 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
             <DialogClose asChild>
               <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleSubmit} disabled={isSubmitting || loading || !collateralAmountWatched}>
-               {props?.allowance as bigint >= (cleanCollateralAmount as bigint)
-                        ? "Mint"
-                        : "Approve"}
-              {loading || isSubmitting && (
-                <Loader2 className="animate-spin size-3" />
-              )}
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || loading || !collateralAmountWatched}
+            >
+              {(props?.allowance as bigint) >= (cleanCollateralAmount as bigint)
+                ? "Mint"
+                : "Approve"}
+              {loading ||
+                (isSubmitting && <Loader2 className="animate-spin size-3" />)}
             </Button>
           </DialogFooter>
         </Form>

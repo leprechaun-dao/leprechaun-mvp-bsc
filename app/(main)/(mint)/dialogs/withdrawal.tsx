@@ -1,3 +1,4 @@
+import { wagmiConfig } from "@/app/wagmiConfig";
 import { DecimalInput } from "@/components/DecimalInput";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,28 +17,30 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import * as constants from "@/utils/constants";
+import { parseBigInt } from "@/utils/web3";
 import { PositionDetails, SyntheticAssetInfo } from "@/utils/web3/interfaces";
 import { DialogProps } from "@radix-ui/react-dialog";
+import { readContract } from "@wagmi/core";
+import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { readContract } from "@wagmi/core";
-import * as constants from "@/utils/constants";
-import { parseBigInt } from "@/utils/web3";
-import useDebouncedCallback from "beautiful-react-hooks/useDebouncedCallback";
-import { wagmiConfig } from "@/app/wagmiConfig";
 import { toast } from "sonner";
-import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { parseUnits } from "viem";
+import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 
 export interface PositionDialogProps extends DialogProps {
-  positionToCheck: PositionDetails | undefined;
+  position: PositionDetails | undefined;
   collateral: SyntheticAssetInfo | undefined;
-  allowance?: bigint | null;
+  allowance: bigint | null;
   onSuccess?: () => void;
 }
 
-export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
+export const WithdrawalDialog = ({
+  onSuccess,
+  ...props
+}: PositionDialogProps) => {
   const form = useForm();
   const [maxWithdrawable, setMaxWithdrawable] = useState<bigint | null>(null);
   const [newRatio, setNewRatio] = useState<number | null>(null);
@@ -50,26 +53,24 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
 
   // Handle transaction receipt
   const { status } = useWaitForTransactionReceipt({
-    // @ts-expect-error this is a valid address
-    hash: txHash,
+    hash: txHash || undefined,
     confirmations: 1,
-    enabled: !!txHash,
   });
 
   useEffect(() => {
-    if (props.open && props.positionToCheck) {
-      console.log("Position data:", props.positionToCheck);
+    if (props.open && props.position) {
+      console.log("Position data:", props.position);
 
       // Reset form when dialog opens
       form.reset({
-        amount: "" as unknown as number
+        amount: "" as unknown as number,
       });
 
       // Calculate max withdrawable amount
       calculateMaxWithdrawable();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.open, props.positionToCheck]);
+  }, [props.open, props.position]);
 
   // Handle transaction status changes
   useEffect(() => {
@@ -77,7 +78,8 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
       toast("Transaction sent.", {
         action: {
           label: "View on Explorer",
-          onClick: () => window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
+          onClick: () =>
+            window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
         },
       });
     }
@@ -87,7 +89,8 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
         description: `Withdrew collateral from your position`,
         action: {
           label: "View on Explorer",
-          onClick: () => window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
+          onClick: () =>
+            window.open(`${constants.EXPLORER_URL}/tx/${txHash}`, "_blank"),
         },
       });
 
@@ -107,7 +110,7 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
 
     if (status === "error") {
       toast.error("Transaction failed", {
-        description: "Error processing transaction"
+        description: "Error processing transaction",
       });
       setIsSubmitting(false);
       setTxHash(null);
@@ -115,11 +118,11 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
   }, [status, txHash, onSuccess, props, form]);
 
   const calculateMaxWithdrawable = async () => {
-    if (!props.positionToCheck || !props.collateral) return;
+    if (!props.position || !props.collateral) return;
 
     try {
       console.log("Calculating max withdrawable...");
-      console.log("Position:", props.positionToCheck);
+      console.log("Position:", props.position);
       console.log("Collateral:", props.collateral);
 
       // Get effective collateral ratio (minimum required)
@@ -127,10 +130,7 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
         abi: constants.LeprechaunFactoryABI,
         address: constants.LeprechaunFactoryAddress,
         functionName: "getEffectiveCollateralRatio",
-        args: [
-          props.positionToCheck.syntheticAsset,
-          props.positionToCheck.collateralAsset
-        ],
+        args: [props.position.syntheticAsset, props.position.collateralAsset],
       });
 
       console.log("Effective ratio:", effectiveRatio);
@@ -141,20 +141,21 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
         address: constants.PositionManagerAddress,
         functionName: "getRequiredCollateral",
         args: [
-          props.positionToCheck.syntheticAsset,
-          props.positionToCheck.collateralAsset,
-          props.positionToCheck.mintedAmount
+          props.position.syntheticAsset,
+          props.position.collateralAsset,
+          props.position.mintedAmount,
         ],
       });
 
       console.log("Required collateral:", requiredCollateral);
-      console.log("Actual collateral:", props.positionToCheck.collateralAmount);
+      console.log("Actual collateral:", props.position.collateralAmount);
 
       // Calculate max withdrawable (with some buffer)
-      if (props.positionToCheck.collateralAmount > (requiredCollateral as bigint)) {
+      if (props.position.collateralAmount > (requiredCollateral as bigint)) {
         // Add 1% buffer to be safe
-        const safetyBuffer = (requiredCollateral as bigint) * BigInt(100) / BigInt(9900);
-        const maxWithdraw = props.positionToCheck.collateralAmount - safetyBuffer;
+        const safetyBuffer =
+          ((requiredCollateral as bigint) * BigInt(100)) / BigInt(9900);
+        const maxWithdraw = props.position.collateralAmount - safetyBuffer;
         setMaxWithdrawable(maxWithdraw > 0 ? maxWithdraw : BigInt(0));
         console.log("Max withdrawable set to:", maxWithdraw);
       } else {
@@ -169,7 +170,12 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
 
   const handleWithdrawalAmountChange = useDebouncedCallback(
     async (value: string) => {
-      if (!props.positionToCheck || !props.collateral || !value || parseFloat(value) <= 0) {
+      if (
+        !props.position ||
+        !props.collateral ||
+        !value ||
+        parseFloat(value) <= 0
+      ) {
         setNewRatio(null);
         setFeeAmount(null);
         return;
@@ -180,7 +186,7 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
         const withdrawAmount = parseUnits(value, decimals);
 
         // Ensure not trying to withdraw more than available
-        if (withdrawAmount > props.positionToCheck.collateralAmount) {
+        if (withdrawAmount > props.position.collateralAmount) {
           return;
         }
 
@@ -191,11 +197,13 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
           functionName: "protocolFee",
         });
 
-        const fee = (withdrawAmount * (protocolFeePercent as bigint)) / BigInt(10000);
+        const fee =
+          (withdrawAmount * (protocolFeePercent as bigint)) / BigInt(10000);
         setFeeAmount(fee);
 
         // Calculate new ratio after withdrawal
-        const remainingCollateral = props.positionToCheck.collateralAmount - withdrawAmount;
+        const remainingCollateral =
+          props.position.collateralAmount - withdrawAmount;
 
         // Get USD values
         const collateralUsdValue = await readContract(wagmiConfig, {
@@ -203,16 +211,20 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
           address: constants.OracleInterfaceAddress,
           functionName: "getUsdValue",
           args: [
-            props.positionToCheck.collateralAsset,
+            props.position.collateralAsset,
             remainingCollateral,
-            props.collateral.decimals
+            props.collateral.decimals,
           ],
         });
 
-        const debtUsdValue = props.positionToCheck.debtUsdValue;
+        const debtUsdValue = props.position.debtUsdValue;
 
         if (debtUsdValue && debtUsdValue > 0) {
-          const newCollateralRatio = Number((collateralUsdValue as bigint) * BigInt(10000) / (debtUsdValue as bigint)) / 100;
+          const newCollateralRatio =
+            Number(
+              ((collateralUsdValue as bigint) * BigInt(10000)) /
+                (debtUsdValue as bigint),
+            ) / 100;
           setNewRatio(newCollateralRatio);
           console.log("New ratio calculated:", newCollateralRatio);
         }
@@ -220,12 +232,12 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
         console.error("Error calculating new ratio:", error);
       }
     },
-    [props.collateral, props.positionToCheck],
+    [props.collateral, props.position],
     800,
   );
 
   const handleSubmit = form.handleSubmit(async (data) => {
-    if (!props.positionToCheck || !props.collateral) {
+    if (!props.position || !props.collateral) {
       console.error("Missing position or collateral data");
       return;
     }
@@ -240,10 +252,10 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
       const amountInWei = parseUnits(amountString, decimals);
 
       console.log("Amount in wei:", amountInWei);
-      console.log("Position collateral:", props.positionToCheck.collateralAmount);
+      console.log("Position collateral:", props.position.collateralAmount);
 
       // Check if amount is valid
-      if (amountInWei > (props.positionToCheck.collateralAmount || BigInt(0))) {
+      if (amountInWei > (props.position.collateralAmount || BigInt(0))) {
         toast.error("Cannot withdraw more than available collateral");
         setIsSubmitting(false);
         return;
@@ -255,38 +267,41 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
           abi: constants.LeprechaunFactoryABI,
           address: constants.LeprechaunFactoryAddress,
           functionName: "getEffectiveCollateralRatio",
-          args: [
-            props.positionToCheck.syntheticAsset,
-            props.positionToCheck.collateralAsset
-          ],
+          args: [props.position.syntheticAsset, props.position.collateralAsset],
         });
 
         const minRequiredRatio = Number(effectiveRatio as bigint) / 100;
 
         if (newRatio < minRequiredRatio) {
-          toast.error(`New ratio (${newRatio.toFixed(2)}%) would be below minimum required ratio (${minRequiredRatio.toFixed(2)}%)`);
+          toast.error(
+            `New ratio (${newRatio.toFixed(2)}%) would be below minimum required ratio (${minRequiredRatio.toFixed(2)}%)`,
+          );
           setIsSubmitting(false);
           return;
         }
       }
 
-      console.log("Calling withdrawCollateral with:", props.positionToCheck.positionId, amountInWei);
+      console.log(
+        "Calling withdrawCollateral with:",
+        props.position.positionId,
+        amountInWei,
+      );
 
       // Withdraw collateral using wagmi's useWriteContractAsync
       const hash = await writeContractAsync({
         address: constants.PositionManagerAddress as `0x${string}`,
         abi: constants.PositionManagerABI,
         functionName: "withdrawCollateral",
-        args: [props.positionToCheck.positionId, amountInWei]
+        args: [props.position.positionId, amountInWei],
       });
 
       console.log("Transaction hash:", hash);
       setTxHash(hash);
-
     } catch (error) {
       console.error("Withdrawal error:", error);
       toast.error("Transaction failed", {
-        description: error instanceof Error ? error.message : "Unknown error occurred"
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
       });
       setIsSubmitting(false);
     }
@@ -298,26 +313,46 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
         <Form {...form}>
           <DialogTitle>Withdraw Collateral</DialogTitle>
           <DialogDescription>
-            Withdraw collateral from your position while maintaining a safe ratio.
+            Withdraw collateral from your position while maintaining a safe
+            ratio.
           </DialogDescription>
           <div className="text-sm space-y-2">
             <div>
-              <span className="font-medium">Position ID:</span> {props.positionToCheck?.positionId.toString()}
+              <span className="font-medium">Position ID:</span>{" "}
+              {props.position?.positionId.toString()}
             </div>
             <div>
-              <span className="font-medium">Collateral:</span> {props.positionToCheck?.collateralSymbol}
+              <span className="font-medium">Collateral:</span>{" "}
+              {props.position?.collateralSymbol}
             </div>
             <div>
-              <span className="font-medium">Available:</span> {props.positionToCheck?.collateralAmount ?
-                parseBigInt(props.positionToCheck.collateralAmount, props.collateral?.decimals || 0, 4) : '0'} {props.positionToCheck?.collateralSymbol}
+              <span className="font-medium">Available:</span>{" "}
+              {props.position?.collateralAmount
+                ? parseBigInt(
+                    props.position.collateralAmount,
+                    props.collateral?.decimals || 0,
+                    4,
+                  )
+                : "0"}{" "}
+              {props.position?.collateralSymbol}
             </div>
             <div>
-              <span className="font-medium">Current Ratio:</span> {props.positionToCheck?.currentRatio ?
-                parseBigInt(props.positionToCheck.currentRatio as bigint, 2, 2) : '0'}%
+              <span className="font-medium">Current Ratio:</span>{" "}
+              {props.position?.currentRatio
+                ? parseBigInt(props.position.currentRatio as bigint, 2, 2)
+                : "0"}
+              %
             </div>
             <div>
-              <span className="font-medium">Max Withdrawable:</span> {maxWithdrawable !== null ?
-                parseBigInt(maxWithdrawable, props.collateral?.decimals || 0, 4) : '0'} {props.positionToCheck?.collateralSymbol}
+              <span className="font-medium">Max Withdrawable:</span>{" "}
+              {maxWithdrawable !== null
+                ? parseBigInt(
+                    maxWithdrawable,
+                    props.collateral?.decimals || 0,
+                    4,
+                  )
+                : "0"}{" "}
+              {props.position?.collateralSymbol}
             </div>
           </div>
           <FormField
@@ -341,17 +376,25 @@ export const WithdrawalDialog = ({ onSuccess, ...props }: PositionDialogProps) =
           />
           {feeAmount !== null && (
             <div className="text-sm mt-1">
-              <span className="font-medium">Protocol Fee:</span> {parseBigInt(feeAmount, props.collateral?.decimals || 0, 4)} {props.positionToCheck?.collateralSymbol}
+              <span className="font-medium">Protocol Fee:</span>{" "}
+              {parseBigInt(feeAmount, props.collateral?.decimals || 0, 4)}{" "}
+              {props.position?.collateralSymbol}
             </div>
           )}
           {newRatio !== null && (
             <div className="text-sm mt-2">
-              <span className="font-medium">New Ratio:</span> {newRatio.toFixed(2)}%
-              <div className={`text-xs ${newRatio < 150 ? 'text-red-500' : newRatio > 200 ? 'text-green-500' : 'text-yellow-500'}`}>
-                {newRatio < 150 ? '⚠️ Danger zone' :
-                 newRatio < 180 ? '⚠️ Close to liquidation threshold' :
-                 newRatio > 250 ? '✅ Very safe position' :
-                 '✅ Safe position'}
+              <span className="font-medium">New Ratio:</span>{" "}
+              {newRatio.toFixed(2)}%
+              <div
+                className={`text-xs ${newRatio < 150 ? "text-red-500" : newRatio > 200 ? "text-green-500" : "text-yellow-500"}`}
+              >
+                {newRatio < 150
+                  ? "⚠️ Danger zone"
+                  : newRatio < 180
+                    ? "⚠️ Close to liquidation threshold"
+                    : newRatio > 250
+                      ? "✅ Very safe position"
+                      : "✅ Safe position"}
               </div>
             </div>
           )}

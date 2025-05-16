@@ -70,7 +70,7 @@ import {
 } from "wagmi";
 import { assetsImages } from "../../../utils/constants";
 import { ClosePositionDialog } from "./dialogs/close-position";
-import { DepositDialog, PositionDialogProps } from "./dialogs/deposit";
+import { DepositDialog } from "./dialogs/deposit";
 import { sendTxSentToast, sendTxSuccessToast } from "./dialogs/toasts";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
 
@@ -273,8 +273,9 @@ export default function Home() {
     "deposit" | "withdrawal" | "close-position" | null
   >(null);
 
-  const [selectedPosition, setSelectedPosition] =
-    useState<PositionDialogProps | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<
+    PositionDetails | undefined
+  >(undefined);
   const { writeContract, writeContractAsync } = useWriteContract({
     mutation: {
       onError(error) {
@@ -549,18 +550,6 @@ export default function Home() {
   );
 
   const [loadingMintedAmount, setLoadingMintedAmount] = useState(false);
-  const getAllowanceForSymbol = (symbol: string): bigint | null => {
-    switch (symbol) {
-      case "mUSDC":
-        return mUSDCAllowance?.result as bigint;
-      case "mWETH":
-        return mWETHAllowance?.result as bigint;
-      case "mWBTC":
-        return mWBTCAllowance?.result as bigint;
-      default:
-        return null;
-    }
-  };
 
   useEffect(() => {
     if (
@@ -588,27 +577,79 @@ export default function Home() {
     handleUpdateMintedAmount,
   ]);
 
+  const selectedPositionCollateral = useMemo(() => {
+    return collateralAssetsWithBalance.find(
+      (it) => it.symbol === selectedPosition?.collateralSymbol,
+    );
+  }, [collateralAssetsWithBalance, selectedPosition]);
+
+  const selectedPositionAllowance = useMemo(() => {
+    if (!selectedPositionCollateral) return null;
+
+    let _allowance;
+
+    switch (selectedPositionCollateral.symbol) {
+      case "mUSDC":
+        _allowance = mUSDCAllowance;
+        break;
+      case "mWETH":
+        _allowance = mWETHAllowance;
+        break;
+      case "mWBTC":
+        _allowance = mWBTCAllowance;
+        break;
+
+      default:
+        break;
+    }
+
+    const result = _allowance?.result as number | undefined;
+    if (!result) return null;
+
+    return BigInt(result);
+  }, [selectedPosition, mUSDCAllowance, mWETHAllowance, mWBTCAllowance]);
+
   return (
     <div className="flex flex-col min-h-screen w-full">
-      {/* @ts-expect-error we dont care about these issues rn */}
       <DepositDialog
-        {...selectedPosition}
+        position={selectedPosition}
+        collateral={selectedPositionCollateral}
+        allowance={selectedPositionAllowance}
+        onSuccess={() => {
+          // Refresh user positions
+          openPositionsContractCall.refetch();
+          // Refresh allowances and balances
+          allowanceAndBalanceContract.refetch();
+        }}
         open={openDialog === "deposit"}
         onOpenChange={(v) =>
           v ? setOpenDialog("deposit") : setOpenDialog(null)
         }
       />
-      {/* @ts-expect-error we dont care about these issues rn */}
       <WithdrawalDialog
-        {...selectedPosition}
+        position={selectedPosition}
+        collateral={selectedPositionCollateral}
+        allowance={selectedPositionAllowance}
+        onSuccess={() => {
+          // Refresh user positions
+          openPositionsContractCall.refetch();
+          // Refresh allowances and balances
+          allowanceAndBalanceContract.refetch();
+        }}
         open={openDialog === "withdrawal"}
         onOpenChange={(v) =>
           v ? setOpenDialog("withdrawal") : setOpenDialog(null)
         }
       />
-      {/* @ts-expect-error we dont care about these issues rn */}
       <ClosePositionDialog
-        {...selectedPosition}
+        position={selectedPosition}
+        collateral={selectedPositionCollateral}
+        onSuccess={() => {
+          // Refresh user positions
+          openPositionsContractCall.refetch();
+          // Refresh allowances and balances
+          allowanceAndBalanceContract.refetch();
+        }}
         open={openDialog === "close-position"}
         onOpenChange={(v) =>
           v ? setOpenDialog("close-position") : setOpenDialog(null)
@@ -625,7 +666,7 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-3 gap-2">
               <Button
                 id="USDC"
                 variant="secondary"
@@ -996,24 +1037,7 @@ export default function Home() {
                               <DropdownMenuContent>
                                 <DropdownMenuItem
                                   onClick={() => {
-                                    setSelectedPosition({
-                                      positionToCheck: position,
-                                      collateral:
-                                        collateralAssetsWithBalance.find(
-                                          (collateralAsset) =>
-                                            collateralAsset.symbol ===
-                                            position.collateralSymbol,
-                                        ),
-                                      allowance: getAllowanceForSymbol(
-                                        position.collateralSymbol,
-                                      ),
-                                      onSuccess: () => {
-                                        // Refresh user positions
-                                        openPositionsContractCall.refetch();
-                                        // Refresh allowances and balances
-                                        allowanceAndBalanceContract.refetch();
-                                      },
-                                    });
+                                    setSelectedPosition(position);
                                     setOpenDialog("deposit");
                                   }}
                                 >
@@ -1028,24 +1052,7 @@ export default function Home() {
                                       position,
                                     );
 
-                                    setSelectedPosition({
-                                      positionToCheck: position,
-                                      collateral:
-                                        collateralAssetsWithBalance.find(
-                                          (collateralAsset) =>
-                                            collateralAsset.symbol ===
-                                            position.collateralSymbol,
-                                        ),
-                                      allowance: getAllowanceForSymbol(
-                                        position.collateralSymbol,
-                                      ),
-                                      onSuccess: () => {
-                                        // Refresh user positions
-                                        openPositionsContractCall.refetch();
-                                        // Refresh allowances and balances
-                                        allowanceAndBalanceContract.refetch();
-                                      },
-                                    });
+                                    setSelectedPosition(position);
                                     setOpenDialog("withdrawal");
                                   }}
                                 >
@@ -1058,24 +1065,7 @@ export default function Home() {
                                       "Position data for close:",
                                       position,
                                     );
-                                    setSelectedPosition({
-                                      positionToCheck: position,
-                                      collateral:
-                                        collateralAssetsWithBalance.find(
-                                          (collateralAsset) =>
-                                            collateralAsset.symbol ===
-                                            position.collateralSymbol,
-                                        ),
-                                      allowance: getAllowanceForSymbol(
-                                        position.collateralSymbol,
-                                      ),
-                                      onSuccess: () => {
-                                        // Refresh user positions
-                                        openPositionsContractCall.refetch();
-                                        // Refresh allowances and balances
-                                        allowanceAndBalanceContract.refetch();
-                                      },
-                                    });
+                                    setSelectedPosition(position);
                                     setOpenDialog("close-position");
                                   }}
                                 >
