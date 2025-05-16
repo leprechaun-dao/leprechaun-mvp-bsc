@@ -326,7 +326,7 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
               disabled={isSubmitting || loading || !collateralAmountWatched}
             >
               {(props?.allowance as bigint) >= (cleanCollateralAmount as bigint)
-                ? "Mint"
+                ? "Deposit"
                 : "Approve"}
               {loading ||
                 (isSubmitting && <Loader2 className="animate-spin size-3" />)}
