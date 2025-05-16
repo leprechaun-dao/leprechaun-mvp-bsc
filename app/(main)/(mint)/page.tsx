@@ -87,7 +87,7 @@ const TokenSelectorButton = ({
           <span className="group-hover:block group-focus-visible:block hidden">
             Change Token
           </span>
-          <span className="group-hover:hidden group-focus-visible:hidden flex items-center gap-1">
+          <span className="group-hover:hidden group-focus-visible:hidden flex items-center gap-2">
             <Image
               src={assetsImages[selectedSymbol]}
               alt={`${selectedSymbol} Icon`}
@@ -941,7 +941,7 @@ export default function Home() {
                       .map((position) => (
                         <TableRow key={position.positionId}>
                           <TableCell>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               <Image
                                 src={assetsImages[position.syntheticSymbol]}
                                 alt={`${position.syntheticSymbol} Icon`}
@@ -958,7 +958,7 @@ export default function Home() {
                             {parseBigInt(position.mintedAmount, 18, 3)}
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-2">
                               <Image
                                 src={
                                   assetsImages[position.collateralSymbol || ""]
