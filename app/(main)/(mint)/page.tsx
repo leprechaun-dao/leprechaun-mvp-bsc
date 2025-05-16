@@ -462,11 +462,11 @@ export default function Home() {
     await allowanceAndBalanceContract.refetch();
   });
 
-  function mintMockCollateral(mock: "USDC" | "wETH" | "wBTC") {
+  async function mintMockCollateral(mock: "USDC" | "wETH" | "wBTC") {
     const abi = constants.SyntheticAssetABI;
 
     let contractAddress: `0x${string}` | null = null;
-    let amount = BigInt(10_000_000);
+    let amount = BigInt(0);
 
     switch (mock) {
       case "wBTC":
@@ -488,11 +488,26 @@ export default function Home() {
 
     if (!contractAddress) return;
 
-    writeContract({
-      abi,
-      address: contractAddress,
-      functionName: "mint",
-      args: [account.address, amount],
+    const mintCollateralPromise = async () => {
+      const txHash = await writeContractAsync({
+        abi,
+        address: contractAddress,
+        functionName: "mint",
+        args: [account.address, amount],
+      });
+
+      await waitForTransactionReceipt(wagmiConfig, {
+        hash: txHash,
+        confirmations: 3,
+      });
+
+      return allowanceAndBalanceContract.refetch();
+    };
+
+    toast.promise(mintCollateralPromise(), {
+      loading: `Adding ${mock} to your wallet...`,
+      success: () => `Added ${mock} to your wallet!`,
+      error: `Failed to add ${mock} to your wallet.`,
     });
   }
 
