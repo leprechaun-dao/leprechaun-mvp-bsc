@@ -1,12 +1,15 @@
 import { createConfig, http } from "wagmi";
 import { base } from "wagmi/chains";
-import { metaMask } from "wagmi/connectors";
+import { getDefaultConfig } from "connectkit";
 
-export const wagmiConfig = createConfig({
-  chains: [base],
-  connectors: [metaMask()],
-  ssr: true,
-  transports: {
-    [base.id]: http(),
-  },
-});
+export const wagmiConfig = createConfig(
+  getDefaultConfig({
+    chains: [base],
+    appName: "Leprechaun",
+    walletConnectProjectId: process.env.CLOUD_REOWN_KEY as string,
+    ssr: true,
+    transports: {
+      [base.id]: http(),
+    },
+  })
+);

@@ -1,3 +1,5 @@
+"use client";
+
 import { Header } from "@/components/layout/header";
 import { Swap } from "./(components)/swap";
 

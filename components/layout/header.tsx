@@ -1,7 +1,7 @@
 import { cn } from "@/utils/css";
 import Image from "next/image";
 import Link from "next/link";
-import { ConnectButton } from "../web3/connect-button";
+import { ConnectKitButton } from "connectkit";
 
 const routes = {
   mint: {
@@ -46,7 +46,7 @@ export const Header = ({
         ))}
       </div>
 
-      <ConnectButton />
+      <div className="ml-auto"> <ConnectKitButton /></div>
     </header>
   );
 };

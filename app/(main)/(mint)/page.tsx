@@ -63,7 +63,6 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import {
   useAccount,
-  useConnect,
   useReadContract,
   useReadContracts,
   useWriteContract,
@@ -73,6 +72,7 @@ import { ClosePositionDialog } from "./dialogs/close-position";
 import { DepositDialog, PositionDialogProps } from "./dialogs/deposit";
 import { WithdrawalDialog } from "./dialogs/withdrawal";
 import { sendTxSentToast, sendTxSuccessToast } from "./dialogs/toasts";
+import { ConnectKitButton } from "connectkit";
 
 const TokenSelectorButton = ({
   selectedSymbol,
@@ -154,7 +154,6 @@ const factoryContract = {
 
 export default function Home() {
   const form = useForm();
-  const { connect, connectors } = useConnect();
   const account = useAccount();
   const positionManagerAddress = constants.PositionManagerAddress;
 
@@ -626,7 +625,8 @@ export default function Home() {
     }
 
     try {
-      const wasAdded = await (window).ethereum
+      // eslint-disable-next-line  @typescript-eslint/no-explicit-any
+      const wasAdded = await (window as any).ethereum
         .request({
           method: "wallet_watchAsset",
           params: {
@@ -1089,7 +1089,7 @@ export default function Home() {
         onClick={() => {
           // Log the position data to confirm it exists
           console.log("Position data for withdrawal:", position);
-          
+
           setSelectedPosition({
             positionToCheck: position,
             collateral: collateralAssetsWithBalance.find(
@@ -1157,12 +1157,9 @@ export default function Home() {
           {(account.status === "disconnected" ||
             account.status === "connecting") && (
             <CardFooter>
-              <Button
-                className="w-full"
-                onClick={() => connect({ connector: connectors[0] })}
-              >
-                Connect
-              </Button>
+              <div className="mx-auto">
+                <ConnectKitButton />
+              </div>
             </CardFooter>
           )}
         </Card>

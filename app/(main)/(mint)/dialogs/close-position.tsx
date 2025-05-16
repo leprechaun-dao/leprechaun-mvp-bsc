@@ -22,10 +22,9 @@ import { sendTxSentToast, sendTxSuccessToast } from "./toasts";
 export interface PositionDialogProps extends DialogProps {
   positionToCheck: PositionDetails | undefined;
   collateral: SyntheticAssetInfo | undefined;
-  onSuccess?: () => void;
 }
 
-export const ClosePositionDialog = ({ onSuccess, ...props }: PositionDialogProps) => {
+export const ClosePositionDialog = ({ ...props }: PositionDialogProps) => {
   const [feeAmount, setFeeAmount] = useState<bigint | null>(null);
   const [netCollateral, setNetCollateral] = useState<bigint | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
