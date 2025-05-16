@@ -448,6 +448,7 @@ export default function Home() {
         confirmations: 3,
       });
 
+      const poolHash = constants.getUniswapPoolHash(data.mint.symbol, data.collateral.tokenAddress)
       toast.success("Transaction confirmed.", {
         action: {
           label: (
@@ -464,7 +465,7 @@ export default function Home() {
           onClick: () => {
             // TODO: Update this to Pool URL
             window.open(
-              `https://basescan.org/tx/${confirmationTx.transactionHash}`,
+              `https://app.uniswap.org/explore/pools/base/${poolHash}`,
               "_blank",
             );
           },
