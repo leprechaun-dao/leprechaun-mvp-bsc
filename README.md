@@ -25,7 +25,7 @@ Leprechaun Protocol allows users to mint synthetic assets (such as synthetic DOW
 ## Tech Stack
 
 - **Framework**: Next.js
-- **UI Components**: Radix UI with custom styled components
+- **UI Components**: Built based on Shadcn
 - **Form Handling**: React Hook Form
 - **Blockchain Interaction**: Wagmi and viem
 - **Wallet Connection**: ConnectKit
@@ -50,8 +50,8 @@ The frontend is organized into several key components:
 
 ### Prerequisites
 
-- Node.js (v16+)
-- Yarn or npm
+- Node.js (We recommend using v20+)
+- Yarn
 - A web3 wallet (MetaMask recommended)
 
 ### Installation
