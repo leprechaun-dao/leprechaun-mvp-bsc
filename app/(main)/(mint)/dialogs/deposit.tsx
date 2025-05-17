@@ -128,6 +128,8 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
         confirmations: 3,
       });
 
+      const poolHash = constants.getUniswapPoolHash(props.position.syntheticSymbol)
+
       toast.success("Transaction confirmed.", {
         action: {
           label: (
@@ -143,7 +145,7 @@ export const DepositDialog = ({ ...props }: PositionDialogProps) => {
           ),
           onClick: () => {
             window.open(
-              `https://basescan.org/tx/${confirmationTx.transactionHash}`,
+              `https://app.uniswap.org/explore/pools/base/${poolHash}`,
               "_blank",
             );
           },
