@@ -67,16 +67,12 @@ cd leprechaun-frontend
 
 ```bash
 yarn install
-# or
-npm install
 ```
 
 3. Start the development server:
 
 ```bash
 yarn dev
-# or
-npm run dev
 ```
 
 4. Open your browser and navigate to `http://localhost:3000`
