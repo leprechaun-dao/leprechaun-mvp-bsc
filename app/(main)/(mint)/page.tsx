@@ -448,7 +448,8 @@ export default function Home() {
         confirmations: 3,
       });
 
-      const poolHash = constants.getUniswapPoolHash(data.mint.symbol, data.collateral.tokenAddress)
+      const poolHash = constants.getUniswapPoolHash(data.mint.symbol)
+
       toast.success("Transaction confirmed.", {
         action: {
           label: (

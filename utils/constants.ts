@@ -45,8 +45,7 @@ export {
   SyntheticAssetABI,
 };
 
-export function getUniswapPoolHash(sAssetSymbol: string, collateral: string): string {
-  if (collateral === mUSDCAddress) {
+export function getUniswapPoolHash(sAssetSymbol: string): string {
     switch (sAssetSymbol) {
       case "sDOW":
         return "0x35fe68d317f15c3db528192cf0e71eff2265babaaaee23d7192b98703729bd89";
@@ -60,47 +59,6 @@ export function getUniswapPoolHash(sAssetSymbol: string, collateral: string): st
       default:
         return "";
     }
-  }
-
-  if (collateral === mWETHAddress) {
-    switch (sAssetSymbol) {
-      case "sDOW":
-
-        return "";
-
-      case "sXAU":
-
-        return "";
-
-      case "sOIL":
-
-        return "";
-
-      default:
-        return "";
-    }
-  }
-
-  if (collateral === mWBTCAddress) {
-    switch (sAssetSymbol) {
-      case "sDOW":
-
-        return "";
-
-      case "sXAU":
-
-        return "";
-
-      case "sOIL":
-
-        return "";
-
-      default:
-        return "";
-    }
-  }
-
-  return ""
 }
 
 export const EXPLORER_URL = "https://basescan.org/"
