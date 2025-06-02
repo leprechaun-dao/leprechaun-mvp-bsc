@@ -8,10 +8,10 @@ const routes = {
     href: "/",
     label: "Mint",
   },
-  trade: {
-    href: "/trade",
-    label: "Trade",
-  },
+  // trade: {
+  //   href: "/trade",
+  //   label: "Trade",
+  // },
 };
 
 export const Header = ({
