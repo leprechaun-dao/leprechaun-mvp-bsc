@@ -450,28 +450,7 @@ export default function Home() {
 
       const poolHash = constants.getUniswapPoolHash(data.mint.symbol)
 
-      toast.success("Transaction confirmed.", {
-        action: {
-          label: (
-            <div className="flex gap-2 items-center">
-              <Image
-                src="/uniswap.svg"
-                alt="Uniswap Logo"
-                width={24}
-                height={24}
-              />
-              Pool on Uniswap
-            </div>
-          ),
-          onClick: () => {
-            // TODO: Update this to Pool URL
-            window.open(
-              `https://app.uniswap.org/explore/pools/base/${poolHash}`,
-              "_blank",
-            );
-          },
-        },
-      });
+      toast.success("Transaction confirmed.");
 
       await openPositionsContractCall.refetch();
       form.reset();
