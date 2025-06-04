@@ -443,12 +443,10 @@ export default function Home() {
 
       sendTxSentToast(createPositionTxHash);
 
-      const confirmationTx = await waitForTransactionReceipt(wagmiConfig, {
+      await waitForTransactionReceipt(wagmiConfig, {
         hash: createPositionTxHash,
         confirmations: 3,
       });
-
-      const poolHash = constants.getUniswapPoolHash(data.mint.symbol)
 
       toast.success("Transaction confirmed.");
 
